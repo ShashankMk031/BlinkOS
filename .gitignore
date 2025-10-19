@@ -1,0 +1,35 @@
+cat > .gitignore << 'EOF'
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data files
+data/calibration.pkl
+data/settings.json
+*.log
+
+# MacOS
+.DS_Store
+
+# Environment
+.env
+EOF  
+
+.python-version 
+
+DEMO.md 
+PLAN.md 
+REQUIREMENTS.md 
+TODO.md 
