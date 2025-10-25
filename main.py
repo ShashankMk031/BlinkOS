@@ -103,9 +103,13 @@ class BlinkOS:
             width=25,
             height=2,
             bg="#3498db",
-            fg="white",
+            fg="black",
             font=("Arial", 11, "bold"),
-            cursor="hand2"
+            cursor="hand2",
+            relief= tk.RAISED, 
+            bd = 3, 
+            activebackground="#114e77" ,
+            activeforeground="white"
         )
         self.eye_button.grid(row=1, column=0, pady=5)
         
@@ -142,7 +146,7 @@ Opens in separate window"""
             width=25,
             height=2,
             bg="#2ecc71",
-            fg="white",
+            fg="black",
             font=("Arial", 11, "bold"),
             cursor="hand2"
         )
@@ -173,7 +177,7 @@ Say 'exit' to quit"""
             width=25,
             height=2,
             bg="#e67e22",
-            fg="white",
+            fg="black",
             font=("Arial", 11, "bold"),
             cursor="hand2"
         ).grid(row=0, column=0, pady=5)
@@ -198,7 +202,7 @@ Say 'exit' to quit"""
             command=self.show_commands,
             width=12,
             bg="#95a5a6",
-            fg="white",
+            fg="black",
             font=("Arial", 10)
         ).grid(row=0, column=0, padx=3, pady=5)
         
@@ -208,7 +212,7 @@ Say 'exit' to quit"""
             command=self.show_help,
             width=12,
             bg="#3498db",
-            fg="white",
+            fg="black",
             font=("Arial", 10)
         ).grid(row=0, column=1, padx=3, pady=5)
         
@@ -218,7 +222,7 @@ Say 'exit' to quit"""
             command=self.show_demo_scenarios,
             width=12,
             bg="#9b59b6",
-            fg="white",
+            fg="black",
             font=("Arial", 10)
         ).grid(row=0, column=2, padx=3, pady=5)
         

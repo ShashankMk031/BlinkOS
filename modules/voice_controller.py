@@ -24,8 +24,9 @@ class VoiceController:
         
         # Speech recognition setup
         self.recognizer = sr.Recognizer()
-        self.microphone = sr.Microphone()
         
+        # List available microphones and let the user choose 
+        self.select_microphone()         
         # Adjust for ambient noise
         print("Calibrating microphone for ambient noise...")
         with self.microphone as source:
@@ -116,6 +117,35 @@ class VoiceController:
         
         print("Voice Controller initialized!")
         print(f"{len(self.commands)} commands available")
+    
+    def select_microphone(self): 
+        """ 
+        List and sleect microphone device """ 
+        print("\nAvailable Microphones:") 
+        print('-' * 50) 
+        
+        mic_list = sr.Microphone.list_microphone_names() 
+        
+        for index , name in enumerate(mic_list):
+            print(f"{index}: {name}") 
+        
+        print('-' * 50) 
+        
+        # Trying to auto select the built-in microphone ( avoid the AIrpods pro 3) 
+        built_in_index = None 
+        for index, name in enumerate(mic_list): 
+            name_lower = name.lower() 
+            if 'built-in' in name_lower or 'macbook' in name_lower or 'internal' in name_lower:
+                built_in_index = index 
+                print(f"\n Auto selected : {index} - {name}") 
+                break 
+        if built_in_index is not None :
+            self.select_microphone = sr.Microphone(device_index = built_in_index) 
+        else: 
+            #Default to the first microphone 
+            print(f"\n Using default microphone: 0 - {mic_list[0]}") 
+            self.select_microphone = sr.Microphone(device_index = 0) 
+        print("\nTIP: if voice recognition is poor, then we need to edit the voice_controller.py and manually set device_index to your prefered microphone\n")              
     
     def speak(self, text, blocking=False):
         """
