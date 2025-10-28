@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Eye Tracker Module - Day 3 Complete
+Eye Tracker Module 
 Optimized head tracking + blink-to-click
 """
 
@@ -13,6 +13,11 @@ import time
 import platform
 import subprocess
 import os
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from modules.calibration import Calibration
 
 
 class EyeTracker:
@@ -54,8 +59,13 @@ class EyeTracker:
         self.LEFT_EYE = [362, 385, 387, 263, 373, 380]
         
         # Calibration mode
-        self.is_calibrated = False
-        self.calibration_samples = []
+        self.calibration = Calibration(self.screen_w, self.screen_h)
+        self.is_calibrated = self.calibration.load_calibration()
+        if self.is_calibrated:
+            print("Calibration loaded - using calibrated mapping")
+        else:
+            print("No calibration found - using uncalibrated mode")
+            print("   Press 'R' during tracking to run calibration")
         self.calibration_mode = False
         self.screen_margin_x = 0.25  # 25% margin on sides
         self.screen_margin_y = 0.20  # 20% margin top/bottom
@@ -64,7 +74,7 @@ class EyeTracker:
         self.prev_time = 0
         
         # AGGRESSIVE SMOOTHING for stable cursor
-        self.smooth_buffer_size = 15  # Increased from 7
+        self.smooth_buffer_size = 25  # Increased from 7 -> 15 ->  now 25
         self.gaze_buffer_x = deque(maxlen=self.smooth_buffer_size)
         self.gaze_buffer_y = deque(maxlen=self.smooth_buffer_size)
         
@@ -153,19 +163,27 @@ class EyeTracker:
     def map_to_screen(self, face_x, face_y):
         """
         Map face position to screen coordinates
-        Uses margins to give more control range
+        Uses calibration if available, otherwise falls back to simple mapping
         """
-        # Apply margins (you need to move head less for full screen range)
-        norm_x = (face_x - self.screen_margin_x) / (1 - 2 * self.screen_margin_x)
-        norm_y = (face_y - self.screen_margin_y) / (1 - 2 * self.screen_margin_y)
-        
-        # Clamp to 0-1
-        norm_x = max(0, min(1, norm_x))
-        norm_y = max(0, min(1, norm_y))
-        
-        # Map to screen
-        screen_x = int(norm_x * self.screen_w)
-        screen_y = int(norm_y * self.screen_h)
+        if self.is_calibrated:
+            # Use calibrated mapping
+            face_pos = np.array([[face_x, face_y]])
+            screen_coords = self.calibration.apply_calibration(face_pos)
+            screen_x = int(screen_coords[0, 0])
+            screen_y = int(screen_coords[0, 1])
+        else:
+            # Fallback to simple mapping with margins
+            margin_x = 0.25
+            margin_y = 0.20
+            
+            norm_x = (face_x - margin_x) / (1 - 2 * margin_x)
+            norm_y = (face_y - margin_y) / (1 - 2 * margin_y)
+            
+            norm_x = max(0, min(1, norm_x))
+            norm_y = max(0, min(1, norm_y))
+            
+            screen_x = int(norm_x * self.screen_w)
+            screen_y = int(norm_y * self.screen_h)
         
         return screen_x, screen_y
     
@@ -290,6 +308,8 @@ class EyeTracker:
         print("  K - Toggle click on blink")
         print("  A - Toggle audio feedback")
         print("  D - Toggle debug text")
+        print('  R - Run calibration (improves accuracy)') 
+        print("  L - Reload calibration")
         print("  + - Decrease sensitivity (larger head movements)")
         print("  - - Increase sensitivity (smaller head movements)")
         print("-" * 50)
@@ -323,7 +343,7 @@ class EyeTracker:
                 smooth_x, smooth_y = self.smooth_gaze(screen_x, screen_y)
                 
                 # Move cursor (every 2nd frame)
-                if cursor_control_enabled and self._frame_count % 2 == 0:
+                if cursor_control_enabled and self._frame_count % 3 == 0:
                     self.move_cursor_fast(smooth_x, smooth_y)
                 
                 # Blink detection
@@ -372,6 +392,9 @@ class EyeTracker:
                                    (0, 255, 0) if self.click_enabled else (0, 0, 255), 2)
                         cv2.putText(frame, f"Sensitivity: {self.screen_margin_x:.2f}", (10, 210),
                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                        cv2.putText(frame, f"Calibrated: {'YES' if self.is_calibrated else 'NO'}", (10, 210),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, 
+                                    (0, 255, 0) if self.is_calibrated else (0, 165, 255), 2)
             
             else:
                 if show_debug:
@@ -385,7 +408,7 @@ class EyeTracker:
             
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q') or key == ord('Q'):
-                print("\n👋 Stopping...")
+                print("\nStopping...")
                 break
             elif key == ord('c') or key == ord('C'):
                 cursor_control_enabled = not cursor_control_enabled
@@ -398,15 +421,41 @@ class EyeTracker:
                 print(f"Audio: {'ON' if self.audio_feedback else 'OFF'}")
             elif key == ord('d') or key == ord('D'):
                 show_text_debug = not show_text_debug
+            # ADD THESE NEW KEYS:
+            elif key == ord('r') or key == ord('R'):
+                # Run calibration
+                print("\nStarting calibration...")
+                cv2.destroyWindow('Eye Tracker - BlinkOS (Day 3)')
+                success = self.calibration.run_calibration(self.face_mesh, self.cam)
+                if success:
+                    self.is_calibrated = True
+                    print("Calibration complete - cursor control improved!")
+                else:
+                    print("Calibration failed - continuing with previous settings")
+            elif key == ord('l') or key == ord('L'):
+                # Reload calibration
+                self.is_calibrated = self.calibration.load_calibration()
+                if self.is_calibrated:
+                    print("Calibration reloaded")
+                else:
+                    print("NNo calibration file found")
             elif key == ord('+') or key == ord('='):
-                self.screen_margin_x = max(0.1, self.screen_margin_x - 0.05)
-                self.screen_margin_y = max(0.1, self.screen_margin_y - 0.05)
-                print(f"Sensitivity increased: {self.screen_margin_x:.2f}")
+                # Only relevant if not calibrated
+                if not self.is_calibrated:
+                    self.screen_margin_x = max(0.1, self.screen_margin_x - 0.05)
+                    self.screen_margin_y = max(0.1, self.screen_margin_y - 0.05)
+                    print(f"Sensitivity increased: {self.screen_margin_x:.2f}")
+                else:
+                    print("Using calibrated mode - sensitivity adjustment not needed")
             elif key == ord('-') or key == ord('_'):
-                self.screen_margin_x = min(0.4, self.screen_margin_x + 0.05)
-                self.screen_margin_y = min(0.4, self.screen_margin_y + 0.05)
-                print(f"Sensitivity decreased: {self.screen_margin_x:.2f}")
-        
+                # Only relevant if not calibrated
+                if not self.is_calibrated:
+                    self.screen_margin_x = min(0.4, self.screen_margin_x + 0.05)
+                    self.screen_margin_y = min(0.4, self.screen_margin_y + 0.05)
+                    print(f"Sensitivity decreased: {self.screen_margin_x:.2f}")
+                else:
+                    print("Using calibrated mode - sensitivity adjustment not needed")
+                        
         self.cam.release()
         cv2.destroyAllWindows()
         print("Stopped")

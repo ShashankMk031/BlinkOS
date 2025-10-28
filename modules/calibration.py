@@ -272,7 +272,7 @@ class Calibration:
     def calculate_transformation(self):
         """
         Calculate transformation matrix from face positions to screen coordinates
-        Uses polynomial regression for non-linear mapping
+        Uses GENTLE polynomial regression for 13" screens
         
         Returns:
             bool: True if successful
@@ -283,16 +283,15 @@ class Calibration:
         face_array = np.array(self.face_positions)
         screen_array = np.array(self.screen_positions)
         
-        # Create polynomial features for better accuracy
-        # [1, x, y, x^2, xy, y^2, x^3, x^2*y, x*y^2, y^3]
+        # Use QUADRATIC only (less aggressive than cubic)
+        # This prevents over-amplification on small screens
         def create_features(positions):
             x = positions[:, 0]
             y = positions[:, 1]
             return np.column_stack([
-                np.ones_like(x),  # bias
-                x, y,              # linear
-                x**2, x*y, y**2,   # quadratic
-                x**3, x**2*y, x*y**2, y**3  # cubic
+                np.ones_like(x),     # bias
+                x, y,                # linear terms
+                x**2, x*y, y**2,     # quadratic terms (stopped here!)
             ])
         
         X = create_features(face_array)
@@ -312,7 +311,8 @@ class Calibration:
     
     def apply_calibration(self, face_positions):
         """
-        Apply calibration to face positions
+        Apply SIMPLE linear calibration
+        Uses only the corner calibration points for mapping
         
         Args:
             face_positions: Nx2 array of face positions (normalized)
@@ -328,21 +328,29 @@ class Calibration:
         if face_positions.ndim == 1:
             face_positions = face_positions.reshape(1, -1)
         
-        # Create polynomial features
         x = face_positions[:, 0]
         y = face_positions[:, 1]
-        X = np.column_stack([
-            np.ones_like(x),
-            x, y,
-            x**2, x*y, y**2,
-            x**3, x**2*y, x*y**2, y**3
-        ])
         
-        # Apply transformation
-        screen_x = X @ self.transform_matrix_x
-        screen_y = X @ self.transform_matrix_y
+        # Use calibration data to find min/max face positions
+        face_array = np.array(self.face_positions)
+        face_min_x = np.min(face_array[:, 0])
+        face_max_x = np.max(face_array[:, 0])
+        face_min_y = np.min(face_array[:, 1])
+        face_max_y = np.max(face_array[:, 1])
         
-        # Clamp to screen bounds
+        # Map face range to screen range (simple linear)
+        norm_x = (x - face_min_x) / (face_max_x - face_min_x + 0.001)
+        norm_y = (y - face_min_y) / (face_max_y - face_min_y + 0.001)
+        
+        # Clamp to 0-1
+        norm_x = np.clip(norm_x, 0, 1)
+        norm_y = np.clip(norm_y, 0, 1)
+        
+        # Map to screen
+        screen_x = norm_x * self.screen_w
+        screen_y = norm_y * self.screen_h
+        
+        # Final clamp
         screen_x = np.clip(screen_x, 0, self.screen_w - 1)
         screen_y = np.clip(screen_y, 0, self.screen_h - 1)
         
