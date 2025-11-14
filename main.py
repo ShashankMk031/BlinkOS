@@ -8,6 +8,7 @@ import sys
 import subprocess
 import tkinter as tk
 from tkinter import ttk, scrolledtext
+from tkinter import messagebox
 from datetime import datetime
 import os
 
@@ -743,7 +744,208 @@ PRESENTATION TIPS:
             fg="white",
             font=("Arial", 10, "bold")
         ).pack(pady=15)
+    def show_settings(self):
+        """Show settings window with adjustable parameters"""
+        settings_window = tk.Toplevel(self.root)
+        settings_window.title("⚙️ BlinkOS Settings")
+        settings_window.geometry("600x700")
+        
+        # Load settings
+        from modules.settings import Settings
+        settings = Settings()
+        
+        tk.Label(
+            settings_window,
+            text="⚙️ BlinkOS Settings",
+            font=("Arial", 18, "bold")
+        ).pack(pady=15)
+        
+        # Create notebook (tabs)
+        from tkinter import ttk
+        notebook = ttk.Notebook(settings_window)
+        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # === TAB 1: EYE TRACKING ===
+        eye_tab = tk.Frame(notebook, bg="#ecf0f1")
+        notebook.add(eye_tab, text="👁️ Eye Tracking")
+        
+        tk.Label(eye_tab, text="Eye Tracking Settings", font=("Arial", 14, "bold"),
+                bg="#ecf0f1").pack(pady=10)
+        
+        # Smoothing slider
+        smooth_frame = tk.Frame(eye_tab, bg="#ecf0f1")
+        smooth_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        tk.Label(smooth_frame, text="Cursor Smoothing:", font=("Arial", 11),
+                bg="#ecf0f1").pack(anchor=tk.W)
+        tk.Label(smooth_frame, text="(Higher = smoother but slower)", font=("Arial", 9),
+                fg="#7f8c8d", bg="#ecf0f1").pack(anchor=tk.W)
+        
+        smooth_var = tk.IntVar(value=settings.get('eye_tracking', 'smooth_buffer_size'))
+        smooth_slider = tk.Scale(smooth_frame, from_=10, to=50, orient=tk.HORIZONTAL,
+                                variable=smooth_var, length=400, bg="#ecf0f1")
+        smooth_slider.pack(fill=tk.X, pady=5)
+        tk.Label(smooth_frame, textvariable=smooth_var, font=("Arial", 10, "bold"),
+                bg="#ecf0f1").pack()
+        
+        # Update rate slider
+        rate_frame = tk.Frame(eye_tab, bg="#ecf0f1")
+        rate_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        tk.Label(rate_frame, text="Cursor Update Rate:", font=("Arial", 11),
+                bg="#ecf0f1").pack(anchor=tk.W)
+        tk.Label(rate_frame, text="(Higher = slower updates, more stable)", font=("Arial", 9),
+                fg="#7f8c8d", bg="#ecf0f1").pack(anchor=tk.W)
+        
+        rate_var = tk.IntVar(value=settings.get('eye_tracking', 'update_rate'))
+        rate_slider = tk.Scale(rate_frame, from_=1, to=5, orient=tk.HORIZONTAL,
+                            variable=rate_var, length=400, bg="#ecf0f1")
+        rate_slider.pack(fill=tk.X, pady=5)
+        tk.Label(rate_frame, textvariable=rate_var, font=("Arial", 10, "bold"),
+                bg="#ecf0f1").pack()
+        
+        # Click cooldown slider
+        cooldown_frame = tk.Frame(eye_tab, bg="#ecf0f1")
+        cooldown_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        tk.Label(cooldown_frame, text="Click Cooldown (seconds):", font=("Arial", 11),
+                bg="#ecf0f1").pack(anchor=tk.W)
+        tk.Label(cooldown_frame, text="(Time between clicks)", font=("Arial", 9),
+                fg="#7f8c8d", bg="#ecf0f1").pack(anchor=tk.W)
+        
+        cooldown_var = tk.DoubleVar(value=settings.get('eye_tracking', 'click_cooldown'))
+        cooldown_slider = tk.Scale(cooldown_frame, from_=0.5, to=2.0, resolution=0.1,
+                                orient=tk.HORIZONTAL, variable=cooldown_var,
+                                length=400, bg="#ecf0f1")
+        cooldown_slider.pack(fill=tk.X, pady=5)
+        tk.Label(cooldown_frame, textvariable=cooldown_var, font=("Arial", 10, "bold"),
+                bg="#ecf0f1").pack()
+        
+        # === TAB 2: CALIBRATION ===
+        calib_tab = tk.Frame(notebook, bg="#ecf0f1")
+        notebook.add(calib_tab, text="🎯 Calibration")
+        
+        tk.Label(calib_tab, text="Calibration Settings", font=("Arial", 14, "bold"),
+                bg="#ecf0f1").pack(pady=10)
+        
+        # Range expansion slider
+        range_frame = tk.Frame(calib_tab, bg="#ecf0f1")
+        range_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        tk.Label(range_frame, text="Range Expansion:", font=("Arial", 11),
+                bg="#ecf0f1").pack(anchor=tk.W)
+        tk.Label(range_frame, text="(Higher = easier to reach corners)", font=("Arial", 9),
+                fg="#7f8c8d", bg="#ecf0f1").pack(anchor=tk.W)
+        
+        range_var = tk.DoubleVar(value=settings.get('calibration', 'range_expansion'))
+        range_slider = tk.Scale(range_frame, from_=1.0, to=1.5, resolution=0.05,
+                            orient=tk.HORIZONTAL, variable=range_var,
+                            length=400, bg="#ecf0f1")
+        range_slider.pack(fill=tk.X, pady=5)
+        tk.Label(range_frame, textvariable=range_var, font=("Arial", 10, "bold"),
+                bg="#ecf0f1").pack()
+        
+        # Smoothing factor slider
+        calib_smooth_frame = tk.Frame(calib_tab, bg="#ecf0f1")
+        calib_smooth_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        tk.Label(calib_smooth_frame, text="Calibration Smoothing:", font=("Arial", 11),
+                bg="#ecf0f1").pack(anchor=tk.W)
+        tk.Label(calib_smooth_frame, text="(Higher = smoother but less precise)", font=("Arial", 9),
+                fg="#7f8c8d", bg="#ecf0f1").pack(anchor=tk.W)
+        
+        calib_smooth_var = tk.DoubleVar(value=settings.get('calibration', 'smoothing_factor'))
+        calib_smooth_slider = tk.Scale(calib_smooth_frame, from_=0.0, to=0.5, resolution=0.05,
+                                    orient=tk.HORIZONTAL, variable=calib_smooth_var,
+                                    length=400, bg="#ecf0f1")
+        calib_smooth_slider.pack(fill=tk.X, pady=5)
+        tk.Label(calib_smooth_frame, textvariable=calib_smooth_var, font=("Arial", 10, "bold"),
+                bg="#ecf0f1").pack()
+        
+        # Corner boost slider
+        boost_frame = tk.Frame(calib_tab, bg="#ecf0f1")
+        boost_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        tk.Label(boost_frame, text="Corner Boost:", font=("Arial", 11),
+                bg="#ecf0f1").pack(anchor=tk.W)
+        tk.Label(boost_frame, text="(Higher = more sensitive at edges)", font=("Arial", 9),
+                fg="#7f8c8d", bg="#ecf0f1").pack(anchor=tk.W)
+        
+        boost_var = tk.DoubleVar(value=settings.get('calibration', 'corner_boost'))
+        boost_slider = tk.Scale(boost_frame, from_=1.0, to=1.5, resolution=0.05,
+                            orient=tk.HORIZONTAL, variable=boost_var,
+                            length=400, bg="#ecf0f1")
+        boost_slider.pack(fill=tk.X, pady=5)
+        tk.Label(boost_frame, textvariable=boost_var, font=("Arial", 10, "bold"),
+                bg="#ecf0f1").pack()
+        
+        # === TAB 3: SYSTEM ===
+        system_tab = tk.Frame(notebook, bg="#ecf0f1")
+        notebook.add(system_tab, text="⚙️ System")
+        
+        tk.Label(system_tab, text="System Settings", font=("Arial", 14, "bold"),
+                bg="#ecf0f1").pack(pady=10)
+        
+        # Checkboxes
+        checks_frame = tk.Frame(system_tab, bg="#ecf0f1")
+        checks_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        
+        auto_eye_var = tk.BooleanVar(value=settings.get('system', 'auto_start_eye_tracking'))
+        tk.Checkbutton(checks_frame, text="Auto-start eye tracking on launch",
+                    variable=auto_eye_var, font=("Arial", 11),
+                    bg="#ecf0f1").pack(anchor=tk.W, pady=5)
+        
+        auto_voice_var = tk.BooleanVar(value=settings.get('system', 'auto_start_voice_control'))
+        tk.Checkbutton(checks_frame, text="Auto-start voice control on launch",
+                    variable=auto_voice_var, font=("Arial", 11),
+                    bg="#ecf0f1").pack(anchor=tk.W, pady=5)
+        
+        auto_calib_var = tk.BooleanVar(value=settings.get('system', 'load_calibration_on_start'))
+        tk.Checkbutton(checks_frame, text="Load calibration on start",
+                    variable=auto_calib_var, font=("Arial", 11),
+                    bg="#ecf0f1").pack(anchor=tk.W, pady=5)
+        
+        # === BUTTONS ===
+        button_frame = tk.Frame(settings_window)
+        button_frame.pack(fill=tk.X, padx=20, pady=15)
+        
+    def save_and_close():
+        # Save all settings
+        settings.set('eye_tracking', 'smooth_buffer_size', smooth_var.get())
+        settings.set('eye_tracking', 'update_rate', rate_var.get())
+        settings.set('eye_tracking', 'click_cooldown', cooldown_var.get())
+        
+        settings.set('calibration', 'range_expansion', range_var.get())
+        settings.set('calibration', 'smoothing_factor', calib_smooth_var.get())
+        settings.set('calibration', 'corner_boost', boost_var.get())
+        
+        settings.set('system', 'auto_start_eye_tracking', auto_eye_var.get())
+        settings.set('system', 'auto_start_voice_control', auto_voice_var.get())
+        settings.set('system', 'load_calibration_on_start', auto_calib_var.get())
+        
+        settings.save_settings()
+        
+        self.log_activity("✅ Settings saved! Restart systems to apply changes.")
+        settings_window.destroy()
     
+    def reset_defaults():
+        if tk.messagebox.askyesno("Reset Settings", "Reset all settings to defaults?"):
+            settings.reset_to_defaults()
+            settings.save_settings()
+            self.log_activity("🔄 Settings reset to defaults")
+            settings_window.destroy()
+    
+    tk.Button(button_frame, text="💾 Save & Close", command=save_and_close,
+             width=15, height=2, bg="#27ae60", fg="white",
+             font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
+    
+    tk.Button(button_frame, text="🔄 Reset to Defaults", command=reset_defaults,
+             width=15, height=2, bg="#e67e22", fg="white",
+             font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
+    
+    tk.Button(button_frame, text="❌ Cancel", command=settings_window.destroy,
+             width=15, height=2, bg="#95a5a6", fg="white",
+             font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
     def on_closing(self):
         """Handle window close"""
         self.log_activity("Shutting down BlinkOS...")
