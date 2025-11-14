@@ -2,9 +2,7 @@
 """
 Calibration Module - 9-point calibration for eye tracking
 Creates precise mapping between face position and screen coordinates
-""" 
-"""Uses poly reg to create a non - linear mapping between face position and screen position 
-so that I can have the comeplete access to the screen with the right movement of my setup """
+"""
 
 import cv2
 import numpy as np
@@ -54,8 +52,13 @@ class Calibration:
         self.screen_positions = []
         
         # Transformation parameters
-        self.transform_matrix = None
         self.is_calibrated = False
+        
+        # TUNING PARAMETERS - Adjust these for better accuracy!
+        self.range_expansion = 1.1      # Expand range slightly (1.0 = no expansion, 1.2 = 20% more)
+        self.smoothing_factor = 0.0     # Add smoothing to calibration (0.0 = none, 0.3 = gentle)
+        self.corner_boost = 1.0         # Boost sensitivity near corners (1.0 = normal, 1.2 = 20% boost)
+        self.edge_threshold = 0.15      # How close to edge before boost applies (0.15 = 15%)
         
         # Colors for UI
         self.color_inactive = (100, 100, 100)
@@ -65,12 +68,6 @@ class Calibration:
     def draw_calibration_point(self, img, point_idx, is_active=False, is_completed=False):
         """
         Draw a calibration point on the screen
-        
-        Args:
-            img: Image to draw on
-            point_idx: Index of calibration point
-            is_active: Whether this is the current point
-            is_completed: Whether this point is completed
         """
         if point_idx >= len(self.calibration_points):
             return
@@ -105,13 +102,6 @@ class Calibration:
     def run_calibration(self, face_mesh, cam):
         """
         Run the calibration process
-        
-        Args:
-            face_mesh: MediaPipe FaceMesh instance
-            cam: Camera capture object
-            
-        Returns:
-            bool: True if calibration successful
         """
         print("\n" + "="*60)
         print("CALIBRATION MODE")
@@ -257,62 +247,16 @@ class Calibration:
         
         cv2.destroyWindow('Calibration')
         
-        # Calculate transformation
-        print("\nCalculating transformation matrix...")
-        success = self.calculate_transformation()
-        
-        if success:
-            print("Calibration complete!")
-            self.save_calibration()
-            return True
-        else:
-            print("Calibration failed - please try again")
-            return False
-    
-    def calculate_transformation(self):
-        """
-        Calculate transformation matrix from face positions to screen coordinates
-        Uses GENTLE polynomial regression for 13" screens
-        
-        Returns:
-            bool: True if successful
-        """
-        if len(self.face_positions) < 9:
-            return False
-        
-        face_array = np.array(self.face_positions)
-        screen_array = np.array(self.screen_positions)
-        
-        # Use QUADRATIC only (less aggressive than cubic)
-        # This prevents over-amplification on small screens
-        def create_features(positions):
-            x = positions[:, 0]
-            y = positions[:, 1]
-            return np.column_stack([
-                np.ones_like(x),     # bias
-                x, y,                # linear terms
-                x**2, x*y, y**2,     # quadratic terms (stopped here!)
-            ])
-        
-        X = create_features(face_array)
-        
-        # Solve for transformation (separate for x and y)
-        self.transform_matrix_x = np.linalg.lstsq(X, screen_array[:, 0], rcond=None)[0]
-        self.transform_matrix_y = np.linalg.lstsq(X, screen_array[:, 1], rcond=None)[0]
-        
+        # Mark as calibrated
         self.is_calibrated = True
         
-        # Test accuracy
-        predicted = self.apply_calibration(face_array)
-        error = np.mean(np.sqrt(np.sum((predicted - screen_array)**2, axis=1)))
-        print(f"Calibration accuracy: {error:.1f} pixels average error")
-        
+        print("\nCalibration complete!")
+        self.save_calibration()
         return True
     
     def apply_calibration(self, face_positions):
         """
-        Apply SIMPLE linear calibration
-        Uses only the corner calibration points for mapping
+        Apply calibration to face positions with TUNABLE parameters
         
         Args:
             face_positions: Nx2 array of face positions (normalized)
@@ -338,17 +282,63 @@ class Calibration:
         face_min_y = np.min(face_array[:, 1])
         face_max_y = np.max(face_array[:, 1])
         
+        # Calculate face range
+        face_range_x = face_max_x - face_min_x
+        face_range_y = face_max_y - face_min_y
+        
+        # Apply range expansion (helps reach corners)
+        face_center_x = (face_max_x + face_min_x) / 2
+        face_center_y = (face_max_y + face_min_y) / 2
+        
+        expanded_min_x = face_center_x - (face_range_x * self.range_expansion / 2)
+        expanded_max_x = face_center_x + (face_range_x * self.range_expansion / 2)
+        expanded_min_y = face_center_y - (face_range_y * self.range_expansion / 2)
+        expanded_max_y = face_center_y + (face_range_y * self.range_expansion / 2)
+        
         # Map face range to screen range (simple linear)
-        norm_x = (x - face_min_x) / (face_max_x - face_min_x + 0.001)
-        norm_y = (y - face_min_y) / (face_max_y - face_min_y + 0.001)
+        norm_x = (x - expanded_min_x) / (expanded_max_x - expanded_min_x + 0.001)
+        norm_y = (y - expanded_min_y) / (expanded_max_y - expanded_min_y + 0.001)
         
         # Clamp to 0-1
         norm_x = np.clip(norm_x, 0, 1)
         norm_y = np.clip(norm_y, 0, 1)
         
+        # Apply corner boost (makes edges more sensitive)
+        if self.corner_boost != 1.0:
+            # Boost sensitivity near edges
+            near_left = norm_x < self.edge_threshold
+            near_right = norm_x > (1 - self.edge_threshold)
+            near_top = norm_y < self.edge_threshold
+            near_bottom = norm_y > (1 - self.edge_threshold)
+            
+            # Calculate boost amount
+            boost_x = np.where(near_left | near_right,
+                              (norm_x - 0.5) * self.corner_boost + 0.5,
+                              norm_x)
+            boost_y = np.where(near_top | near_bottom,
+                              (norm_y - 0.5) * self.corner_boost + 0.5,
+                              norm_y)
+            
+            # Blend with original
+            norm_x = boost_x
+            norm_y = boost_y
+            
+            # Re-clamp
+            norm_x = np.clip(norm_x, 0, 1)
+            norm_y = np.clip(norm_y, 0, 1)
+        
         # Map to screen
         screen_x = norm_x * self.screen_w
         screen_y = norm_y * self.screen_h
+        
+        # Apply smoothing to calibration (reduces jitter)
+        if self.smoothing_factor > 0:
+            # Blend with simple linear mapping
+            simple_x = x * self.screen_w
+            simple_y = y * self.screen_h
+            
+            screen_x = (1 - self.smoothing_factor) * screen_x + self.smoothing_factor * simple_x
+            screen_y = (1 - self.smoothing_factor) * screen_y + self.smoothing_factor * simple_y
         
         # Final clamp
         screen_x = np.clip(screen_x, 0, self.screen_w - 1)
@@ -361,11 +351,13 @@ class Calibration:
         data = {
             'face_positions': self.face_positions,
             'screen_positions': self.screen_positions,
-            'transform_matrix_x': self.transform_matrix_x,
-            'transform_matrix_y': self.transform_matrix_y,
             'screen_w': self.screen_w,
             'screen_h': self.screen_h,
-            'is_calibrated': self.is_calibrated
+            'is_calibrated': self.is_calibrated,
+            'range_expansion': self.range_expansion,
+            'smoothing_factor': self.smoothing_factor,
+            'corner_boost': self.corner_boost,
+            'edge_threshold': self.edge_threshold,
         }
         
         with open(self.save_path, 'wb') as f:
@@ -390,13 +382,18 @@ class Calibration:
             
             self.face_positions = data['face_positions']
             self.screen_positions = data['screen_positions']
-            self.transform_matrix_x = data['transform_matrix_x']
-            self.transform_matrix_y = data['transform_matrix_y']
             self.screen_w = data['screen_w']
             self.screen_h = data['screen_h']
             self.is_calibrated = data['is_calibrated']
             
+            # Load tuning parameters (with defaults for old calibration files)
+            self.range_expansion = data.get('range_expansion', 1.1)
+            self.smoothing_factor = data.get('smoothing_factor', 0.0)
+            self.corner_boost = data.get('corner_boost', 1.0)
+            self.edge_threshold = data.get('edge_threshold', 0.15)
+            
             print(f"Calibration loaded from {self.save_path}")
+            print(f" Settings: expansion={self.range_expansion}, smooth={self.smoothing_factor}, boost={self.corner_boost}")
             return True
             
         except Exception as e:
