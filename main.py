@@ -107,9 +107,9 @@ class BlinkOS:
             fg="black",
             font=("Arial", 11, "bold"),
             cursor="hand2",
-            relief= tk.RAISED, 
-            bd = 3, 
-            activebackground="#114e77" ,
+            relief=tk.RAISED, 
+            bd=3, 
+            activebackground="#114e77",
             activeforeground="white"
         )
         self.eye_button.grid(row=1, column=0, pady=5)
@@ -226,6 +226,16 @@ Say 'exit' to quit"""
             fg="black",
             font=("Arial", 10)
         ).grid(row=0, column=2, padx=3, pady=5)
+        
+        tk.Button(
+            actions_inner,
+            text="⚙️ Settings",
+            command=self.show_settings,
+            width=12,
+            bg="#34495e",
+            fg="black",
+            font=("Arial", 10)
+        ).grid(row=0, column=3, padx=3, pady=5)
         
         # ==================== ACTIVITY LOG ====================
         log_frame = ttk.LabelFrame(main_frame, text="Activity Log", padding="10")
@@ -744,6 +754,7 @@ PRESENTATION TIPS:
             fg="white",
             font=("Arial", 10, "bold")
         ).pack(pady=15)
+    
     def show_settings(self):
         """Show settings window with adjustable parameters"""
         settings_window = tk.Toplevel(self.root)
@@ -761,7 +772,6 @@ PRESENTATION TIPS:
         ).pack(pady=15)
         
         # Create notebook (tabs)
-        from tkinter import ttk
         notebook = ttk.Notebook(settings_window)
         notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
@@ -909,43 +919,47 @@ PRESENTATION TIPS:
         button_frame = tk.Frame(settings_window)
         button_frame.pack(fill=tk.X, padx=20, pady=15)
         
-    def save_and_close():
-        # Save all settings
-        settings.set('eye_tracking', 'smooth_buffer_size', smooth_var.get())
-        settings.set('eye_tracking', 'update_rate', rate_var.get())
-        settings.set('eye_tracking', 'click_cooldown', cooldown_var.get())
-        
-        settings.set('calibration', 'range_expansion', range_var.get())
-        settings.set('calibration', 'smoothing_factor', calib_smooth_var.get())
-        settings.set('calibration', 'corner_boost', boost_var.get())
-        
-        settings.set('system', 'auto_start_eye_tracking', auto_eye_var.get())
-        settings.set('system', 'auto_start_voice_control', auto_voice_var.get())
-        settings.set('system', 'load_calibration_on_start', auto_calib_var.get())
-        
-        settings.save_settings()
-        
-        self.log_activity("✅ Settings saved! Restart systems to apply changes.")
-        settings_window.destroy()
-    
-    def reset_defaults():
-        if tk.messagebox.askyesno("Reset Settings", "Reset all settings to defaults?"):
-            settings.reset_to_defaults()
+        # Define nested functions for button commands
+        def save_and_close():
+            """Save all settings and close window"""
+            # Save all settings
+            settings.set('eye_tracking', 'smooth_buffer_size', smooth_var.get())
+            settings.set('eye_tracking', 'update_rate', rate_var.get())
+            settings.set('eye_tracking', 'click_cooldown', cooldown_var.get())
+            
+            settings.set('calibration', 'range_expansion', range_var.get())
+            settings.set('calibration', 'smoothing_factor', calib_smooth_var.get())
+            settings.set('calibration', 'corner_boost', boost_var.get())
+            
+            settings.set('system', 'auto_start_eye_tracking', auto_eye_var.get())
+            settings.set('system', 'auto_start_voice_control', auto_voice_var.get())
+            settings.set('system', 'load_calibration_on_start', auto_calib_var.get())
+            
             settings.save_settings()
-            self.log_activity("🔄 Settings reset to defaults")
+            
+            self.log_activity("Settings saved! Restart systems to apply changes.")
             settings_window.destroy()
+        
+        def reset_defaults():
+            """Reset all settings to defaults"""
+            if messagebox.askyesno("Reset Settings", "Reset all settings to defaults?"):
+                settings.reset_to_defaults()
+                settings.save_settings()
+                self.log_activity("Settings reset to defaults")
+                settings_window.destroy()
+        
+        tk.Button(button_frame, text="Save & Close", command=save_and_close,
+                 width=15, height=2, bg="#27ae60", fg="white",
+                 font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(button_frame, text="Reset to Defaults", command=reset_defaults,
+                 width=15, height=2, bg="#e67e22", fg="white",
+                 font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
+        
+        tk.Button(button_frame, text="Cancel", command=settings_window.destroy,
+                 width=15, height=2, bg="#95a5a6", fg="white",
+                 font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
     
-    tk.Button(button_frame, text="💾 Save & Close", command=save_and_close,
-             width=15, height=2, bg="#27ae60", fg="white",
-             font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
-    
-    tk.Button(button_frame, text="🔄 Reset to Defaults", command=reset_defaults,
-             width=15, height=2, bg="#e67e22", fg="white",
-             font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
-    
-    tk.Button(button_frame, text="❌ Cancel", command=settings_window.destroy,
-             width=15, height=2, bg="#95a5a6", fg="white",
-             font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
     def on_closing(self):
         """Handle window close"""
         self.log_activity("Shutting down BlinkOS...")
