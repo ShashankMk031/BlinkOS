@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Eye Tracker Module 
-Optimized head tracking + blink-to-click
+Eye Tracker Module - Enhanced with Visual Feedback
+Optimized head tracking + blink-to-click + professional visual indicators
 """
 
 import cv2
@@ -13,6 +13,7 @@ import time
 import platform
 import subprocess
 import os
+import math
 
 import sys
 from pathlib import Path
@@ -23,7 +24,7 @@ from modules.calibration import Calibration
 class EyeTracker:
     
     def __init__(self):
-        """Initialize the eye tracker"""
+        """Initialize the eye tracker with visual enhancements"""
         # MediaPipe Face Mesh
         self.mp_face_mesh = mp.solutions.face_mesh
         self.face_mesh = self.mp_face_mesh.FaceMesh(
@@ -62,19 +63,20 @@ class EyeTracker:
         self.calibration = Calibration(self.screen_w, self.screen_h)
         self.is_calibrated = self.calibration.load_calibration()
         if self.is_calibrated:
-            print("Calibration loaded - using calibrated mapping")
+            print(" Calibration loaded - using calibrated mapping")
         else:
-            print("No calibration found - using uncalibrated mode")
+            print("  No calibration found - using uncalibrated mode")
             print("   Press 'R' during tracking to run calibration")
         self.calibration_mode = False
-        self.screen_margin_x = 0.25  # 25% margin on sides
-        self.screen_margin_y = 0.20  # 20% margin top/bottom
+        self.screen_margin_x = 0.25
+        self.screen_margin_y = 0.20
         
         # FPS
         self.prev_time = 0
+        self.fps_history = deque(maxlen=30)
         
         # AGGRESSIVE SMOOTHING for stable cursor
-        self.smooth_buffer_size = 25  # Increased from 7 -> 15 ->  now 25
+        self.smooth_buffer_size = 25
         self.gaze_buffer_x = deque(maxlen=self.smooth_buffer_size)
         self.gaze_buffer_y = deque(maxlen=self.smooth_buffer_size)
         
@@ -86,7 +88,7 @@ class EyeTracker:
         # Click control
         self.click_enabled = True
         self.last_click_time = 0
-        self.click_cooldown = 1.0  # 1 second between clicks
+        self.click_cooldown = 1.0
         self.click_count = 0
         self.safe_zone_margin = 50
         
@@ -96,6 +98,37 @@ class EyeTracker:
         # PyAutoGUI settings
         pyautogui.FAILSAFE = False
         pyautogui.PAUSE = 0
+        
+        # ==================== VISUAL FEEDBACK FEATURES ====================
+        
+        # Crosshair settings
+        self.show_crosshair = True
+        self.crosshair_size = 20
+        self.crosshair_color = (0, 255, 0)
+        self.crosshair_thickness = 2
+        
+        # Click animation
+        self.click_animations = []  # List of active animations
+        self.click_animation_duration = 0.5  # seconds
+        
+        # Cursor trail
+        self.show_cursor_trail = True
+        self.cursor_trail = deque(maxlen=10)
+        self.trail_fade_speed = 0.8
+        
+        # Status overlay
+        self.show_status_overlay = True
+        self.tracking_quality = 1.0  # 0.0 to 1.0
+        self.quality_history = deque(maxlen=30)
+        
+        # Face detection confidence
+        self.face_detection_confidence = deque(maxlen=10)
+        
+        # Accuracy indicator
+        self.show_accuracy = True
+        self.accuracy_percentage = 80  # Will be calculated
+        
+        # ==================== END VISUAL FEATURES ====================
         
         # Audio feedback
         self.audio_feedback = True
@@ -107,7 +140,7 @@ class EyeTracker:
             
             if os.path.exists(self.sound_click):
                 self.use_sound_effects = True
-                print("Sound effects enabled")
+                print(" Sound effects enabled")
         except:
             pass
         
@@ -123,12 +156,12 @@ class EyeTracker:
                 self.kCGEventMouseMoved = kCGEventMouseMoved
                 self.kCGHIDEventTap = kCGHIDEventTap
                 self.event_source = CGEventSourceCreate(kCGEventSourceStateHIDSystemState)
-                print("Using Quartz for cursor control")
+                print("  Using Quartz for cursor control")
             except Exception as e:
                 self.use_quartz = False
         
-        print("Eye Tracker initialized!")
-        print("\nTIP: For best control, move your HEAD to control the cursor")
+        print(" Eye Tracker initialized with visual feedback!")
+        print("\n TIP: For best control, move your HEAD to control the cursor")
         print("   Keep your head ~50cm from camera, well-lit from front\n")
     
     def get_face_position(self, landmarks):
@@ -158,21 +191,196 @@ class EyeTracker:
             if len(self._ear_baseline_samples) == 30:
                 baseline_ear = np.mean(self._ear_baseline_samples)
                 self.blink_threshold = baseline_ear * 0.6
-                print(f"Blink threshold: {self.blink_threshold:.3f}")
+                print(f" Blink threshold adjusted: {self.blink_threshold:.3f}")
+    
+    def calculate_tracking_quality(self, face_detected, ear_avg):
+        """
+        Calculate tracking quality score (0.0 to 1.0)
+        Based on face detection stability and eye openness
+        """
+        if not face_detected:
+            quality = 0.0
+        else:
+            # Base quality on EAR (eye openness)
+            if ear_avg > self.blink_threshold:
+                quality = min(1.0, ear_avg / 0.3)  # Normal range ~0.25-0.35
+            else:
+                quality = 0.5  # Blinking or partially occluded
+        
+        self.quality_history.append(quality)
+        self.tracking_quality = np.mean(self.quality_history) if self.quality_history else quality
+        
+        # Update accuracy percentage
+        self.accuracy_percentage = int(self.tracking_quality * 100)
+    
+    def get_quality_color(self):
+        """Get color based on tracking quality"""
+        if self.tracking_quality > 0.7:
+            return (0, 255, 0)  # Green - Excellent
+        elif self.tracking_quality > 0.4:
+            return (0, 255, 255)  # Yellow - OK
+        else:
+            return (0, 0, 255)  # Red - Poor
+    
+    def draw_crosshair(self, frame, x, y):
+        """Draw crosshair at cursor position"""
+        if not self.show_crosshair:
+            return
+        
+        color = self.get_quality_color()
+        size = self.crosshair_size
+        thick = self.crosshair_thickness
+        
+        # Draw cross
+        cv2.line(frame, (x - size, y), (x + size, y), color, thick)
+        cv2.line(frame, (x, y - size), (x, y + size), color, thick)
+        
+        # Draw circle
+        cv2.circle(frame, (x, y), size // 2, color, thick)
+    
+    def add_click_animation(self, x, y):
+        """Add a click animation at position"""
+        self.click_animations.append({
+            'x': x,
+            'y': y,
+            'start_time': time.time(),
+            'max_radius': 50
+        })
+    
+    def draw_click_animations(self, frame):
+        """Draw all active click animations"""
+        current_time = time.time()
+        animations_to_remove = []
+        
+        for i, anim in enumerate(self.click_animations):
+            elapsed = current_time - anim['start_time']
+            
+            if elapsed > self.click_animation_duration:
+                animations_to_remove.append(i)
+                continue
+            
+            # Calculate animation progress (0 to 1)
+            progress = elapsed / self.click_animation_duration
+            
+            # Ripple effect
+            radius = int(progress * anim['max_radius'])
+            opacity = int((1 - progress) * 255)
+            
+            # Draw expanding circle
+            overlay = frame.copy()
+            cv2.circle(overlay, (anim['x'], anim['y']), radius, (0, 255, 0), 3)
+            
+            # Blend with frame
+            alpha = (1 - progress) * 0.7
+            cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
+        
+        # Remove finished animations
+        for i in reversed(animations_to_remove):
+            self.click_animations.pop(i)
+    
+    def draw_cursor_trail(self, frame):
+        """Draw cursor trail"""
+        if not self.show_cursor_trail or len(self.cursor_trail) < 2:
+            return
+        
+        # Draw trail with fading effect
+        for i in range(len(self.cursor_trail) - 1):
+            alpha = (i + 1) / len(self.cursor_trail)
+            thickness = int(2 * alpha)
+            
+            pt1 = self.cursor_trail[i]
+            pt2 = self.cursor_trail[i + 1]
+            
+            color = tuple(int(c * alpha) for c in self.get_quality_color())
+            cv2.line(frame, pt1, pt2, color, thickness)
+    
+    def draw_status_overlay(self, frame, fps, face_detected):
+        """Draw status overlay with tracking quality"""
+        if not self.show_status_overlay:
+            return
+        
+        # Status bar at top
+        bar_height = 40
+        overlay = frame.copy()
+        
+        # Background bar
+        cv2.rectangle(overlay, (0, 0), (self.cam_w, bar_height), (40, 40, 40), -1)
+        cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
+        
+        # Quality indicator circle
+        quality_color = self.get_quality_color()
+        cv2.circle(frame, (20, 20), 8, quality_color, -1)
+        
+        # Status text
+        if face_detected:
+            status_text = f"TRACKING - {self.accuracy_percentage}%"
+        else:
+            status_text = "NO FACE DETECTED"
+        
+        cv2.putText(frame, status_text, (35, 25),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        
+        # FPS
+        cv2.putText(frame, f"FPS: {fps}", (self.cam_w - 100, 25),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        
+        # Click mode indicator
+        click_text = "CLICK: ON" if self.click_enabled else "CLICK: OFF"
+        click_color = (0, 255, 0) if self.click_enabled else (0, 0, 255)
+        cv2.putText(frame, click_text, (self.cam_w // 2 - 50, 25),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, click_color, 2)
+        
+        # Calibration status
+        if self.is_calibrated:
+            calib_text = " CALIBRATED"
+            calib_color = (0, 255, 0)
+        else:
+            calib_text = "⚠ NOT CALIBRATED"
+            calib_color = (0, 165, 255)
+        
+        cv2.putText(frame, calib_text, (10, self.cam_h - 10),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, calib_color, 2)
+    
+    def draw_accuracy_meter(self, frame):
+        """Draw accuracy meter bar"""
+        if not self.show_accuracy:
+            return
+        
+        # Meter position (bottom right)
+        meter_x = self.cam_w - 150
+        meter_y = self.cam_h - 40
+        meter_w = 140
+        meter_h = 20
+        
+        # Background
+        cv2.rectangle(frame, (meter_x, meter_y), (meter_x + meter_w, meter_y + meter_h),
+                     (40, 40, 40), -1)
+        
+        # Fill based on accuracy
+        fill_w = int(meter_w * self.tracking_quality)
+        color = self.get_quality_color()
+        cv2.rectangle(frame, (meter_x, meter_y), (meter_x + fill_w, meter_y + meter_h),
+                     color, -1)
+        
+        # Border
+        cv2.rectangle(frame, (meter_x, meter_y), (meter_x + meter_w, meter_y + meter_h),
+                     (200, 200, 200), 2)
+        
+        # Text
+        cv2.putText(frame, f"{self.accuracy_percentage}%", (meter_x + meter_w + 5, meter_y + 15),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
     
     def map_to_screen(self, face_x, face_y):
         """
         Map face position to screen coordinates
-        Uses calibration if available, otherwise falls back to simple mapping
+        Uses calibration if available
         """
         if self.is_calibrated:
-            # Use calibrated mapping
             face_pos = np.array([[face_x, face_y]])
             screen_coords = self.calibration.apply_calibration(face_pos)
             screen_x = int(screen_coords[0, 0])
             screen_y = int(screen_coords[0, 1])
         else:
-            # Fallback to simple mapping with margins
             margin_x = 0.25
             margin_y = 0.20
             
@@ -188,14 +396,10 @@ class EyeTracker:
         return screen_x, screen_y
     
     def smooth_gaze(self, x, y):
-        """
-        Apply HEAVY smoothing for stable cursor
-        Uses larger buffer for smoother movement
-        """
+        """Apply heavy smoothing for stable cursor"""
         self.gaze_buffer_x.append(x)
         self.gaze_buffer_y.append(y)
         
-        # Use weighted average (recent positions weighted more)
         weights = np.linspace(0.5, 1.0, len(self.gaze_buffer_x))
         
         smooth_x = int(np.average(self.gaze_buffer_x, weights=weights))
@@ -239,29 +443,34 @@ class EyeTracker:
         """Perform click with safety checks"""
         current_time = time.time()
         
-        # Check cooldown
         if current_time - self.last_click_time < self.click_cooldown:
             return False
         
         try:
             current_x, current_y = pyautogui.position()
             
-            # Safety check: avoid window controls
+            # Safety check
             if current_y < self.safe_zone_margin:
                 if current_x < self.safe_zone_margin or current_x > (self.screen_w - self.safe_zone_margin):
-                    print("Click blocked - near window controls")
+                    print(" Click blocked - near window controls")
                     self.play_error_sound()
                     return False
             
             # Perform click
             pyautogui.click(current_x, current_y)
             
+            # Add click animation
+            # Map screen coords to camera coords for animation
+            cam_x = int((current_x / self.screen_w) * self.cam_w)
+            cam_y = int((current_y / self.screen_h) * self.cam_h)
+            self.add_click_animation(cam_x, cam_y)
+            
             self.last_click_time = current_time
             self.click_count += 1
             
             return True
         except Exception as e:
-            print(f"Click error: {e}")
+            print(f" Click error: {e}")
             return False
     
     def play_click_sound(self):
@@ -280,7 +489,7 @@ class EyeTracker:
             print('\a')
         
         current_pos = pyautogui.position()
-        print(f"🖱️ CLICK #{self.click_count} at ({current_pos[0]}, {current_pos[1]})")
+        print(f" CLICK #{self.click_count} at ({current_pos[0]}, {current_pos[1]})")
     
     def play_error_sound(self):
         """Play error sound"""
@@ -293,26 +502,33 @@ class EyeTracker:
                 pass
     
     def calculate_fps(self):
-        """Calculate FPS"""
+        """Calculate FPS with averaging"""
         current_time = time.time()
         fps = 1 / (current_time - self.prev_time + 0.0001)
         self.prev_time = current_time
-        return int(fps)
+        
+        self.fps_history.append(fps)
+        avg_fps = int(np.mean(self.fps_history)) if self.fps_history else int(fps)
+        
+        return avg_fps
     
     def run(self, show_debug=True):
-        """Main tracking loop"""
-        print("\nStarting Eye Tracker...")
+        """Main tracking loop with visual feedback"""
+        print("\n" + "="*60)
+        print("Starting Eye Tracker with Visual Feedback")
+        print("="*60)
         print("\nCONTROLS:")
         print("  Q - Quit")
         print("  C - Toggle cursor control")
         print("  K - Toggle click on blink")
         print("  A - Toggle audio feedback")
+        print("  V - Toggle visual effects (crosshair, trail, overlay)")
         print("  D - Toggle debug text")
-        print('  R - Run calibration (improves accuracy)') 
+        print('  R - Run calibration')
         print("  L - Reload calibration")
-        print("  + - Decrease sensitivity (larger head movements)")
-        print("  - - Increase sensitivity (smaller head movements)")
-        print("-" * 50)
+        print("  + - Decrease sensitivity")
+        print("  - - Increase sensitivity")
+        print("-" * 60 + "\n")
         
         cursor_control_enabled = True
         show_text_debug = True
@@ -329,7 +545,9 @@ class EyeTracker:
             results = self.face_mesh.process(rgb_frame)
             fps = self.calculate_fps()
             
-            if results.multi_face_landmarks:
+            face_detected = results.multi_face_landmarks is not None
+            
+            if face_detected:
                 face_landmarks = results.multi_face_landmarks[0]
                 landmarks = face_landmarks.landmark
                 
@@ -342,7 +560,12 @@ class EyeTracker:
                 # Smooth
                 smooth_x, smooth_y = self.smooth_gaze(screen_x, screen_y)
                 
-                # Move cursor (every 2nd frame)
+                # Add to trail
+                cam_x = int((smooth_x / self.screen_w) * self.cam_w)
+                cam_y = int((smooth_y / self.screen_h) * self.cam_h)
+                self.cursor_trail.append((cam_x, cam_y))
+                
+                # Move cursor
                 if cursor_control_enabled and self._frame_count % 3 == 0:
                     self.move_cursor_fast(smooth_x, smooth_y)
                 
@@ -352,6 +575,7 @@ class EyeTracker:
                 avg_ear = (ear_left + ear_right) / 2.0
                 
                 self.adjust_blink_threshold(avg_ear)
+                self.calculate_tracking_quality(True, avg_ear)
                 
                 if self.detect_blink(ear_left, ear_right):
                     if self.click_enabled:
@@ -360,105 +584,108 @@ class EyeTracker:
                     else:
                         print("BLINK! (clicking disabled)")
                 
-                # Draw debug info
+                # Draw visual feedback
                 if show_debug:
-                    # Draw nose
+                    # Draw cursor trail
+                    self.draw_cursor_trail(frame)
+                    
+                    # Draw crosshair at current gaze
+                    self.draw_crosshair(frame, cam_x, cam_y)
+                    
+                    # Draw click animations
+                    self.draw_click_animations(frame)
+                    
+                    # Draw status overlay
+                    self.draw_status_overlay(frame, fps, True)
+                    
+                    # Draw accuracy meter
+                    self.draw_accuracy_meter(frame)
+                    
+                    # Draw landmarks
                     nose = landmarks[self.NOSE_TIP]
                     nose_x = int(nose.x * self.cam_w)
                     nose_y = int(nose.y * self.cam_h)
                     cv2.circle(frame, (nose_x, nose_y), 5, (255, 0, 0), -1)
                     
-                    # Draw eyes
                     for eye_idx in self.RIGHT_EYE + self.LEFT_EYE:
                         landmark = landmarks[eye_idx]
                         x = int(landmark.x * self.cam_w)
                         y = int(landmark.y * self.cam_h)
                         cv2.circle(frame, (x, y), 2, (0, 255, 0), -1)
-                    
-                    if show_text_debug:
-                        cv2.putText(frame, f"FPS: {fps}", (10, 30),
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                        cv2.putText(frame, f"Face: ({face_x:.2f}, {face_y:.2f})", (10, 60),
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                        cv2.putText(frame, f"Screen: ({smooth_x}, {smooth_y})", (10, 90),
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                        cv2.putText(frame, f"EAR: {avg_ear:.3f}", (10, 120),
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                        cv2.putText(frame, f"Cursor: {'ON' if cursor_control_enabled else 'OFF'}", (10, 150),
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.7, 
-                                   (0, 255, 0) if cursor_control_enabled else (0, 0, 255), 2)
-                        cv2.putText(frame, f"Click: {'ON' if self.click_enabled else 'OFF'} (#{self.click_count})", (10, 180),
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, 
-                                   (0, 255, 0) if self.click_enabled else (0, 0, 255), 2)
-                        cv2.putText(frame, f"Sensitivity: {self.screen_margin_x:.2f}", (10, 210),
-                                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                        cv2.putText(frame, f"Calibrated: {'YES' if self.is_calibrated else 'NO'}", (10, 210),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, 
-                                    (0, 255, 0) if self.is_calibrated else (0, 165, 255), 2)
             
             else:
+                self.calculate_tracking_quality(False, 0)
+                
                 if show_debug:
-                    cv2.putText(frame, "NO FACE DETECTED", (10, 30),
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                    cv2.putText(frame, f"FPS: {fps}", (10, 60),
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                    # Draw status overlay even without face
+                    self.draw_status_overlay(frame, fps, False)
+                    
+                    cv2.putText(frame, " NO FACE DETECTED", 
+                               (self.cam_w//2 - 150, self.cam_h//2),
+                               cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
             
             if show_debug:
-                cv2.imshow('Eye Tracker - BlinkOS (Day 3)', frame)
+                cv2.imshow('Eye Tracker - BlinkOS Enhanced', frame)
             
             key = cv2.waitKey(1) & 0xFF
             if key == ord('q') or key == ord('Q'):
-                print("\nStopping...")
+                print("\n Stopping...")
                 break
             elif key == ord('c') or key == ord('C'):
                 cursor_control_enabled = not cursor_control_enabled
-                print(f"Cursor: {'ON' if cursor_control_enabled else 'OFF'}")
+                print(f" Cursor: {'ON' if cursor_control_enabled else 'OFF'}")
             elif key == ord('k') or key == ord('K'):
                 self.click_enabled = not self.click_enabled
-                print(f"Click on blink: {'ENABLED' if self.click_enabled else 'DISABLED'}")
+                print(f" Click on blink: {'ENABLED' if self.click_enabled else 'DISABLED'}")
             elif key == ord('a') or key == ord('A'):
                 self.audio_feedback = not self.audio_feedback
-                print(f"Audio: {'ON' if self.audio_feedback else 'OFF'}")
+                print(f" Audio: {'ON' if self.audio_feedback else 'OFF'}")
+            elif key == ord('v') or key == ord('V'):
+                # Toggle all visual effects
+                self.show_crosshair = not self.show_crosshair
+                self.show_cursor_trail = not self.show_cursor_trail
+                self.show_status_overlay = not self.show_status_overlay
+                state = "ON" if self.show_crosshair else "OFF"
+                print(f" Visual effects: {state}")
             elif key == ord('d') or key == ord('D'):
                 show_text_debug = not show_text_debug
-            # ADD THESE NEW KEYS:
+                show_debug = not show_debug
+                print(f" Debug: {'ON' if show_debug else 'OFF'}")
             elif key == ord('r') or key == ord('R'):
-                # Run calibration
-                print("\nStarting calibration...")
-                cv2.destroyWindow('Eye Tracker - BlinkOS (Day 3)')
+                print("\n Starting calibration...")
+                cv2.destroyWindow('Eye Tracker - BlinkOS Enhanced')
                 success = self.calibration.run_calibration(self.face_mesh, self.cam)
                 if success:
                     self.is_calibrated = True
-                    print("Calibration complete - cursor control improved!")
+                    print(" Calibration complete - cursor control improved!")
                 else:
-                    print("Calibration failed - continuing with previous settings")
+                    print("Calibration failed")
             elif key == ord('l') or key == ord('L'):
-                # Reload calibration
                 self.is_calibrated = self.calibration.load_calibration()
                 if self.is_calibrated:
                     print("Calibration reloaded")
                 else:
-                    print("NNo calibration file found")
+                    print("No calibration file found")
             elif key == ord('+') or key == ord('='):
-                # Only relevant if not calibrated
                 if not self.is_calibrated:
                     self.screen_margin_x = max(0.1, self.screen_margin_x - 0.05)
                     self.screen_margin_y = max(0.1, self.screen_margin_y - 0.05)
-                    print(f"Sensitivity increased: {self.screen_margin_x:.2f}")
+                    print(f" Sensitivity increased: {self.screen_margin_x:.2f}")
                 else:
-                    print("Using calibrated mode - sensitivity adjustment not needed")
+                    print(" Using calibrated mode - sensitivity adjustment not needed")
             elif key == ord('-') or key == ord('_'):
-                # Only relevant if not calibrated
                 if not self.is_calibrated:
                     self.screen_margin_x = min(0.4, self.screen_margin_x + 0.05)
                     self.screen_margin_y = min(0.4, self.screen_margin_y + 0.05)
-                    print(f"Sensitivity decreased: {self.screen_margin_x:.2f}")
+                    print(f" Sensitivity decreased: {self.screen_margin_x:.2f}")
                 else:
-                    print("Using calibrated mode - sensitivity adjustment not needed")
-                        
+                    print(" Using calibrated mode - sensitivity adjustment not needed")
+        
         self.cam.release()
         cv2.destroyAllWindows()
-        print("Stopped")
+        print("\nEye Tracker stopped")
+        print(f"Total clicks: {self.click_count}")
+        print(f"Average accuracy: {self.accuracy_percentage}%")
     
     def __del__(self):
         """Cleanup"""
@@ -469,11 +696,15 @@ class EyeTracker:
 
 if __name__ == "__main__":
     try:
+        print("\n" + "="*60)
+        print("BlinkOS - Enhanced Eye Tracker")
+        print("="*60 + "\n")
+        
         tracker = EyeTracker()
         tracker.run(show_debug=True)
     except KeyboardInterrupt:
-        print("\nInterrupted")
+        print("\n\nInterrupted by user")
     except Exception as e:
-        print(f"\nError: {e}")
+        print(f"\n\nError: {e}")
         import traceback
         traceback.print_exc()
