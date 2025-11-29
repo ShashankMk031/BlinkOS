@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from modules.calibration import Calibration
+from modules.settings import Settings 
 
 
 class EyeTracker:
@@ -36,6 +37,8 @@ class EyeTracker:
         )
         
         self.mp_drawing = mp.solutions.drawing_utils
+        self.settings = Settings() 
+        print("Settings loaded") 
         self.mp_drawing_styles = mp.solutions.drawing_styles
         
         # Screen dimensions
@@ -76,7 +79,7 @@ class EyeTracker:
         self.fps_history = deque(maxlen=30)
         
         # AGGRESSIVE SMOOTHING for stable cursor
-        self.smooth_buffer_size = 25
+        self.smooth_buffer_size = self.settings.get('eye_tracking','smooth_buffer_size') 
         self.gaze_buffer_x = deque(maxlen=self.smooth_buffer_size)
         self.gaze_buffer_y = deque(maxlen=self.smooth_buffer_size)
         
@@ -86,11 +89,11 @@ class EyeTracker:
         self.blink_frames_required = 3
         
         # Click control
-        self.click_enabled = True
+        self.click_enabled = self.settings.get('eye_tracking','click_enabled') 
         self.last_click_time = 0
-        self.click_cooldown = 1.0
+        self.click_cooldown = self.settings.get('eye_tracking','click_cooldown') 
         self.click_count = 0
-        self.safe_zone_margin = 50
+        self.safe_zone_margin = self.settings.get('eye_tracking','safe_zone_margin')
         
         # Frame counter
         self._frame_count = 0
@@ -102,22 +105,22 @@ class EyeTracker:
         # ==================== VISUAL FEEDBACK FEATURES ====================
         
         # Crosshair settings
-        self.show_crosshair = True
-        self.crosshair_size = 20
+        self.show_crosshair = self.settings.get('visual_feedback','show_crosshair') 
+        self.crosshair_size = self.settings.get('visual_feedback','crosshair_size')
         self.crosshair_color = (0, 255, 0)
         self.crosshair_thickness = 2
         
         # Click animation
         self.click_animations = []  # List of active animations
-        self.click_animation_duration = 0.5  # seconds
+        self.click_animation_duration = self.settings.get('visual_feedback','animation_duration') 
         
         # Cursor trail
-        self.show_cursor_trail = True
-        self.cursor_trail = deque(maxlen=10)
+        self.show_cursor_trail = self.settings.get('visual_feedback','show_cursor_trail')
+        self.cursor_trail = deque(maxlen=self.settings.get('visual_feedback','show_cursor_trail'))
         self.trail_fade_speed = 0.8
         
         # Status overlay
-        self.show_status_overlay = True
+        self.show_status_overlay = self.settings.get('visual_feedback', 'show_status_overlay')
         self.tracking_quality = 1.0  # 0.0 to 1.0
         self.quality_history = deque(maxlen=30)
         
@@ -125,13 +128,13 @@ class EyeTracker:
         self.face_detection_confidence = deque(maxlen=10)
         
         # Accuracy indicator
-        self.show_accuracy = True
+        self.show_accuracy = self.settings.get('visual_feedback', 'show_accuracy_meter')
         self.accuracy_percentage = 80  # Will be calculated
         
         # ==================== END VISUAL FEATURES ====================
         
         # Audio feedback
-        self.audio_feedback = True
+        self.audio_feedback = self.settings.get('eye_tracking', 'audio_feedback')
         self.use_sound_effects = False
         
         try:
@@ -145,7 +148,7 @@ class EyeTracker:
             pass
         
         # Quartz for macOS
-        self.use_quartz = platform.system() == 'Darwin'
+        self.use_quartz = self.settings.get('performance', 'enable_quartz') and platform.system() == 'Darwin'
         if self.use_quartz:
             try:
                 from Quartz import (CGEventCreateMouseEvent, CGEventPost, 
@@ -286,7 +289,7 @@ class EyeTracker:
         # Draw trail with fading effect
         for i in range(len(self.cursor_trail) - 1):
             alpha = (i + 1) / len(self.cursor_trail)
-            thickness = int(2 * alpha)
+            thickness = max(1, int(3 * alpha))
             
             pt1 = self.cursor_trail[i]
             pt2 = self.cursor_trail[i + 1]
@@ -566,7 +569,7 @@ class EyeTracker:
                 self.cursor_trail.append((cam_x, cam_y))
                 
                 # Move cursor
-                if cursor_control_enabled and self._frame_count % 3 == 0:
+                if cursor_control_enabled and self._frame_count % self.settings.get('eye_tracking', 'update_rate') == 0:
                     self.move_cursor_fast(smooth_x, smooth_y)
                 
                 # Blink detection
