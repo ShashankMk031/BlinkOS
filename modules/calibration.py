@@ -45,11 +45,25 @@ class Calibration:
         self.calibration_quality = 0.0  # 0.0 to 1.0
         self.is_calibrated = False
         
-        # Tuning parameters
-        self.range_expansion = 1.15
-        self.smoothing_factor = 0.1
-        self.corner_boost = 1.1
-        self.edge_threshold = 0.15
+        # Tuning parameters 
+        # Load them if available 
+        try: 
+            from modules.settings import Settings 
+            settings = Settings() 
+            
+            # Load calibration tuning from settings 
+            self.range_expansion = settings.get('calibration', 'range_expansion') 
+            self.smoothing_factor = settings.get('calibration','smoothing_factor') 
+            self.corner_boost = settings.get('calibration','corner_boost') 
+            self.edge_threshold = settings.get('calibration','edge_threshold')
+            print(f'Calibration setttings loaded from config')
+        except Exception as e:
+            # Fallback to default values 
+            self.range_expansion = 1.15  # Expand face movement range by 15%
+            self.smoothing_factor = 0.1   # 10% smoothing
+            self.corner_boost = 1.1       # 10% boost near corners
+            self.edge_threshold = 0.15    # 15% from edges
+            print(f'Calibration settings using default values: {e}')
         
         # Visual settings
         self.color_inactive = (100, 100, 100)
