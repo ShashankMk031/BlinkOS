@@ -44,14 +44,17 @@ class BlinkOS:
         """Create the control panel GUI"""
         self.root = tk.Tk()
         self.root.title("BlinkOS - Hands-Free Computer Control")
-        self.root.geometry("600x750")
+        self.root.geometry("650x800")
         self.root.resizable(True, True)
+        
+        # Modern background gradient effect
+        self.root.configure(bg="#f0f4f8")
         
         # Handle window close
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         
-        # Main container
-        main_frame = ttk.Frame(self.root, padding="10")
+        # Main container with modern styling
+        main_frame = tk.Frame(self.root, bg="#f0f4f8", padx=20, pady=20)
         main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # Configure grid weights
@@ -63,185 +66,278 @@ class BlinkOS:
         title_label = tk.Label(
             main_frame,
             text="BlinkOS",
-            font=("Arial", 24, "bold"),
-            fg="#2c3e50"
+            font=("Helvetica", 32, "bold"),
+            fg="#1e40af",
+            bg="#f0f4f8"
         )
-        title_label.grid(row=0, column=0, pady=(0, 5))
+        title_label.grid(row=0, column=0, pady=(0, 8))
         
         subtitle_label = tk.Label(
             main_frame,
             text="Hands-Free Computer Control System",
-            font=("Arial", 12),
-            fg="#7f8c8d"
+            font=("Helvetica", 14),
+            fg="#64748b",
+            bg="#f0f4f8"
         )
-        subtitle_label.grid(row=1, column=0, pady=(0, 10))
+        subtitle_label.grid(row=1, column=0, pady=(0, 5))
         
         version_label = tk.Label(
             main_frame,
             text="Hackathon Demo v0.1.0",
-            font=("Arial", 9),
-            fg="#95a5a6"
+            font=("Helvetica", 10),
+            fg="#94a3b8",
+            bg="#f0f4f8"
         )
-        version_label.grid(row=2, column=0, pady=(0, 15))
+        version_label.grid(row=2, column=0, pady=(0, 20))
         
         # ==================== EYE TRACKING SECTION ====================
-        eye_frame = ttk.LabelFrame(main_frame, text="Eye Tracking", padding="10")
-        eye_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=5)
+        eye_frame = tk.LabelFrame(
+            main_frame,
+            text="Eye Tracking",
+            font=("Helvetica", 13, "bold"),
+            fg="#1e40af",
+            bg="#ffffff",
+            relief=tk.FLAT,
+            borderwidth=2,
+            highlightthickness=0
+        )
+        eye_frame.grid(row=3, column=0, sticky=(tk.W, tk.E), pady=8, ipady=10, ipadx=10)
         eye_frame.columnconfigure(0, weight=1)
+        eye_frame.configure(bg="#ffffff")
         
         self.eye_status_label = tk.Label(
             eye_frame,
             text="Inactive",
-            font=("Arial", 12, "bold"),
-            fg="red"
+            font=("Helvetica", 13, "bold"),
+            fg="#ef4444",
+            bg="#ffffff"
         )
-        self.eye_status_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.eye_status_label.grid(row=0, column=0, sticky=tk.W, pady=8, padx=10)
         
         self.eye_button = tk.Button(
             eye_frame,
             text="Start Eye Tracking",
             command=self.toggle_eye_tracking,
-            width=25,
+            width=28,
             height=2,
-            bg="#3498db",
-            fg="black",
-            font=("Arial", 11, "bold"),
+            bg="#3b82f6",
+            fg="white",
+            font=("Helvetica", 12, "bold"),
             cursor="hand2",
-            relief=tk.RAISED, 
-            bd=3, 
-            activebackground="#114e77",
-            activeforeground="white"
+            relief=tk.FLAT,
+            bd=0,
+            activebackground="#2563eb",
+            activeforeground="white",
+            highlightthickness=0
         )
-        self.eye_button.grid(row=1, column=0, pady=5)
+        self.eye_button.grid(row=1, column=0, pady=8, padx=10)
         
-        eye_info = """Control cursor with head movement
-Blink to click • Press Q to quit
+        eye_info = """Move your head to control cursor • Blink to click
+Press Q to quit • Press K to toggle clicking
 Opens in separate window"""
         
         self.eye_info_label = tk.Label(
             eye_frame,
             text=eye_info,
-            font=("Arial", 9),
-            fg="#7f8c8d",
+            font=("Helvetica", 10),
+            fg="#64748b",
+            bg="#ffffff",
             justify=tk.LEFT
         )
-        self.eye_info_label.grid(row=2, column=0, pady=5)
+        self.eye_info_label.grid(row=2, column=0, pady=(0, 8), padx=10)
         
         # ==================== VOICE CONTROL SECTION ====================
-        voice_frame = ttk.LabelFrame(main_frame, text="Voice Control", padding="10")
-        voice_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), pady=5)
+        voice_frame = tk.LabelFrame(
+            main_frame,
+            text="Voice Control",
+            font=("Helvetica", 13, "bold"),
+            fg="#059669",
+            bg="#ffffff",
+            relief=tk.FLAT,
+            borderwidth=2,
+            highlightthickness=0
+        )
+        voice_frame.grid(row=4, column=0, sticky=(tk.W, tk.E), pady=8, ipady=10, ipadx=10)
         voice_frame.columnconfigure(0, weight=1)
+        voice_frame.configure(bg="#ffffff")
         
         self.voice_status_label = tk.Label(
             voice_frame,
             text="Inactive",
-            font=("Arial", 12, "bold"),
-            fg="red"
+            font=("Helvetica", 13, "bold"),
+            fg="#ef4444",
+            bg="#ffffff"
         )
-        self.voice_status_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.voice_status_label.grid(row=0, column=0, sticky=tk.W, pady=8, padx=10)
         
         self.voice_button = tk.Button(
             voice_frame,
             text="Start Voice Control",
             command=self.toggle_voice_control,
-            width=25,
+            width=28,
             height=2,
-            bg="#2ecc71",
-            fg="black",
-            font=("Arial", 11, "bold"),
-            cursor="hand2"
+            bg="#10b981",
+            fg="white",
+            font=("Helvetica", 12, "bold"),
+            cursor="hand2",
+            relief=tk.FLAT,
+            bd=0,
+            activebackground="#059669",
+            activeforeground="white",
+            highlightthickness=0
         )
-        self.voice_button.grid(row=1, column=0, pady=5)
+        self.voice_button.grid(row=1, column=0, pady=8, padx=10)
         
         voice_info = """46+ voice commands available
-Say 'help' to list commands
-Say 'exit' to quit"""
+Say 'help' to list all commands • Say 'exit' to quit
+Supports dictation, apps, navigation & more"""
         
         self.voice_info_label = tk.Label(
             voice_frame,
             text=voice_info,
-            font=("Arial", 9),
-            fg="#7f8c8d",
+            font=("Helvetica", 10),
+            fg="#64748b",
+            bg="#ffffff",
             justify=tk.LEFT
         )
-        self.voice_info_label.grid(row=2, column=0, pady=5)
+        self.voice_info_label.grid(row=2, column=0, pady=(0, 8), padx=10)
         
         # ==================== QUICK START ====================
-        quickstart_frame = ttk.LabelFrame(main_frame, text="Quick Start", padding="10")
-        quickstart_frame.grid(row=5, column=0, sticky=(tk.W, tk.E), pady=5)
+        quickstart_frame = tk.LabelFrame(
+            main_frame,
+            text="Quick Start",
+            font=("Helvetica", 13, "bold"),
+            fg="#d97706",
+            bg="#ffffff",
+            relief=tk.FLAT,
+            borderwidth=2,
+            highlightthickness=0
+        )
+        quickstart_frame.grid(row=5, column=0, sticky=(tk.W, tk.E), pady=8, ipady=10, ipadx=10)
         quickstart_frame.columnconfigure(0, weight=1)
+        quickstart_frame.configure(bg="#ffffff")
         
         tk.Button(
             quickstart_frame,
             text="Start Both Systems",
             command=self.start_both,
-            width=25,
+            width=28,
             height=2,
-            bg="#e67e22",
-            fg="black",
-            font=("Arial", 11, "bold"),
-            cursor="hand2"
-        ).grid(row=0, column=0, pady=5)
+            bg="#f59e0b",
+            fg="white",
+            font=("Helvetica", 12, "bold"),
+            cursor="hand2",
+            relief=tk.FLAT,
+            bd=0,
+            activebackground="#d97706",
+            activeforeground="white",
+            highlightthickness=0
+        ).grid(row=0, column=0, pady=8, padx=10)
         
         tk.Label(
             quickstart_frame,
-            text="Starts eye tracking and voice control together",
-            font=("Arial", 9),
-            fg="#7f8c8d"
-        ).grid(row=1, column=0, pady=2)
+            text="Launch eye tracking and voice control together for full hands-free experience",
+            font=("Helvetica", 10),
+            fg="#64748b",
+            bg="#ffffff"
+        ).grid(row=1, column=0, pady=(0, 8), padx=10)
         
         # ==================== QUICK ACTIONS ====================
-        actions_frame = ttk.LabelFrame(main_frame, text="Quick Actions", padding="10")
-        actions_frame.grid(row=6, column=0, sticky=(tk.W, tk.E), pady=5)
+        actions_frame = tk.LabelFrame(
+            main_frame,
+            text="Quick Actions",
+            font=("Helvetica", 13, "bold"),
+            fg="#6366f1",
+            bg="#ffffff",
+            relief=tk.FLAT,
+            borderwidth=2,
+            highlightthickness=0
+        )
+        actions_frame.grid(row=6, column=0, sticky=(tk.W, tk.E), pady=8, ipady=10, ipadx=10)
+        actions_frame.configure(bg="#ffffff")
 
-        actions_inner = tk.Frame(actions_frame)
-        actions_inner.grid(row=0, column=0)
+        actions_inner = tk.Frame(actions_frame, bg="#ffffff")
+        actions_inner.grid(row=0, column=0, pady=5)
         
         tk.Button(
             actions_inner,
             text="Commands",
             command=self.show_commands,
-            width=12,
-            bg="#95a5a6",
-            fg="black",
-            font=("Arial", 10)
-        ).grid(row=0, column=0, padx=3, pady=5)
+            width=13,
+            bg="#8b5cf6",
+            fg="white",
+            font=("Helvetica", 10, "bold"),
+            cursor="hand2",
+            relief=tk.FLAT,
+            bd=0,
+            activebackground="#7c3aed",
+            activeforeground="white",
+            highlightthickness=0
+        ).grid(row=0, column=0, padx=4, pady=5)
         
         tk.Button(
             actions_inner,
-            text="ℹHelp",
+            text="Help",
             command=self.show_help,
-            width=12,
-            bg="#3498db",
-            fg="black",
-            font=("Arial", 10)
-        ).grid(row=0, column=1, padx=3, pady=5)
+            width=13,
+            bg="#3b82f6",
+            fg="white",
+            font=("Helvetica", 10, "bold"),
+            cursor="hand2",
+            relief=tk.FLAT,
+            bd=0,
+            activebackground="#2563eb",
+            activeforeground="white",
+            highlightthickness=0
+        ).grid(row=0, column=1, padx=4, pady=5)
         
         tk.Button(
             actions_inner,
             text="Demo",
             command=self.show_demo_scenarios,
-            width=12,
-            bg="#9b59b6",
-            fg="black",
-            font=("Arial", 10)
-        ).grid(row=0, column=2, padx=3, pady=5)
+            width=13,
+            bg="#ec4899",
+            fg="white",
+            font=("Helvetica", 10, "bold"),
+            cursor="hand2",
+            relief=tk.FLAT,
+            bd=0,
+            activebackground="#db2777",
+            activeforeground="white",
+            highlightthickness=0
+        ).grid(row=0, column=2, padx=4, pady=5)
         
         tk.Button(
             actions_inner,
-            text="⚙️ Settings",
+            text="Settings",
             command=self.show_settings,
-            width=12,
-            bg="#34495e",
-            fg="black",
-            font=("Arial", 10)
-        ).grid(row=0, column=3, padx=3, pady=5)
+            width=13,
+            bg="#64748b",
+            fg="white",
+            font=("Helvetica", 10, "bold"),
+            cursor="hand2",
+            relief=tk.FLAT,
+            bd=0,
+            activebackground="#475569",
+            activeforeground="white",
+            highlightthickness=0
+        ).grid(row=0, column=3, padx=4, pady=5)
         
         # ==================== ACTIVITY LOG ====================
-        log_frame = ttk.LabelFrame(main_frame, text="Activity Log", padding="10")
-        log_frame.grid(row=7, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=5)
+        log_frame = tk.LabelFrame(
+            main_frame,
+            text="Activity Log",
+            font=("Helvetica", 13, "bold"),
+            fg="#0891b2",
+            bg="#ffffff",
+            relief=tk.FLAT,
+            borderwidth=2,
+            highlightthickness=0
+        )
+        log_frame.grid(row=7, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), pady=8, ipady=10, ipadx=10)
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
+        log_frame.configure(bg="#ffffff")
         
         # Configure main_frame row weight for log expansion
         main_frame.rowconfigure(7, weight=1)
@@ -250,24 +346,30 @@ Say 'exit' to quit"""
             log_frame,
             height=8,
             width=70,
-            font=("Courier", 9),
-            bg="#ecf0f1",
-            fg="#2c3e50"
+            font=("Menlo", 10),
+            bg="#f8fafc",
+            fg="#334155",
+            relief=tk.FLAT,
+            borderwidth=1,
+            highlightthickness=0
         )
-        self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S), padx=5, pady=5)
         
         # ==================== STATUS BAR ====================
-        status_frame = tk.Frame(main_frame, relief=tk.SUNKEN, bd=1)
+        status_frame = tk.Frame(main_frame, bg="#e0f2fe", relief=tk.FLAT, bd=0, height=40)
         status_frame.grid(row=8, column=0, sticky=(tk.W, tk.E), pady=(10, 0))
         
         self.status_label = tk.Label(
             status_frame,
             text="Ready to start - Click buttons above to begin",
             anchor=tk.W,
-            font=("Arial", 9),
-            fg="#27ae60"
+            font=("Helvetica", 11),
+            fg="#0369a1",
+            bg="#e0f2fe",
+            padx=15,
+            pady=10
         )
-        self.status_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.status_label.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # Add initial log entries
         self.log_activity("BlinkOS Control Panel initialized")
@@ -289,9 +391,18 @@ Say 'exit' to quit"""
         
         print(f"{message}")
     
-    def update_status(self, message, color="#2c3e50"):
+    def update_status(self, message, color="#334155"):
         """Update status bar"""
         self.status_label.config(text=message, fg=color)
+        # Update background color based on status type
+        if "error" in message.lower() or "failed" in message.lower():
+            self.status_label.config(bg="#fee2e2")
+        elif "active" in message.lower() or "running" in message.lower():
+            self.status_label.config(bg="#d1fae5")
+        elif "starting" in message.lower():
+            self.status_label.config(bg="#fef3c7")
+        else:
+            self.status_label.config(bg="#e0f2fe")
     
     def toggle_eye_tracking(self):
         """Start/stop eye tracking"""
@@ -345,18 +456,20 @@ Say 'exit' to quit"""
     def _update_eye_tracking_ui(self, active):
         """Update eye tracking UI"""
         if active:
-            self.eye_status_label.config(text="Active", fg="green")
+            self.eye_status_label.config(text="● Active", fg="#10b981")
             self.eye_button.config(
-                text="Stop Eye Tracking",
-                bg="#e74c3c"
+                text="■ Stop Eye Tracking",
+                bg="#ef4444",
+                activebackground="#dc2626"
             )
             self.log_activity("Eye tracking active")
-            self.update_status("Eye tracking running - check separate window", "#27ae60")
+            self.update_status("Eye tracking running - check separate window", "#059669")
         else:
-            self.eye_status_label.config(text="● Inactive", fg="red")
+            self.eye_status_label.config(text="● Inactive", fg="#ef4444")
             self.eye_button.config(
                 text="▶ Start Eye Tracking",
-                bg="#3498db"
+                bg="#3b82f6",
+                activebackground="#2563eb"
             )
     
     def toggle_voice_control(self):
@@ -411,18 +524,20 @@ Say 'exit' to quit"""
     def _update_voice_control_ui(self, active):
         """Update voice control UI"""
         if active:
-            self.voice_status_label.config(text="● Active", fg="green")
+            self.voice_status_label.config(text="● Active", fg="#10b981")
             self.voice_button.config(
-                text="Stop Voice Control",
-                bg="#e74c3c"
+                text="■ Stop Voice Control",
+                bg="#ef4444",
+                activebackground="#dc2626"
             )
             self.log_activity("Voice control active - say commands now!")
-            self.update_status("Voice control listening ", "#27ae60")
+            self.update_status("Voice control listening for commands", "#059669")
         else:
-            self.voice_status_label.config(text="Inactive", fg="red")
+            self.voice_status_label.config(text="● Inactive", fg="#ef4444")
             self.voice_button.config(
-                text="Start Voice Control",
-                bg="#2ecc71"
+                text="▶ Start Voice Control",
+                bg="#10b981",
+                activebackground="#059669"
             )
     
     def start_both(self):
@@ -435,28 +550,40 @@ Say 'exit' to quit"""
         # Delay voice control start slightly
         self.root.after(1000, lambda: self.toggle_voice_control() if not self.voice_control_active else None)
         
-        self.update_status("Full hands-free control active!", "#27ae60")
+        self.update_status("Full hands-free control active!", "#059669")
     
     def show_commands(self):
         """Show voice commands"""
         commands_window = tk.Toplevel(self.root)
         commands_window.title("Voice Commands Reference")
-        commands_window.geometry("550x650")
+        commands_window.geometry("600x700")
+        commands_window.configure(bg="#f0f4f8")
+        
+        header_frame = tk.Frame(commands_window, bg="#3b82f6", height=80)
+        header_frame.pack(fill=tk.X)
+        header_frame.pack_propagate(False)
         
         tk.Label(
-            commands_window,
+            header_frame,
             text="Voice Commands",
-            font=("Arial", 18, "bold")
-        ).pack(pady=15)
+            font=("Helvetica", 22, "bold"),
+            fg="white",
+            bg="#3b82f6"
+        ).pack(pady=20)
         
         text = scrolledtext.ScrolledText(
             commands_window,
-            width=65,
-            height=32,
-            font=("Courier", 10),
-            bg="#ecf0f1"
+            width=68,
+            height=30,
+            font=("Menlo", 11),
+            bg="#ffffff",
+            fg="#1e293b",
+            relief=tk.FLAT,
+            borderwidth=0,
+            padx=15,
+            pady=15
         )
-        text.pack(padx=15, pady=10, fill=tk.BOTH, expand=True)
+        text.pack(padx=20, pady=20, fill=tk.BOTH, expand=True)
         
         commands_text = """
 * APPLICATIONS (9 commands):
@@ -505,37 +632,57 @@ TOTAL: 46+ Commands Available!
         text.insert("1.0", commands_text)
         text.config(state=tk.DISABLED)
         
+        button_frame = tk.Frame(commands_window, bg="#f0f4f8")
+        button_frame.pack(pady=15)
+        
         tk.Button(
-            commands_window,
+            button_frame,
             text="Close",
             command=commands_window.destroy,
-            width=15,
+            width=18,
             height=2,
-            bg="#95a5a6",
+            bg="#64748b",
             fg="white",
-            font=("Arial", 10, "bold")
-        ).pack(pady=15)
+            font=("Helvetica", 11, "bold"),
+            cursor="hand2",
+            relief=tk.FLAT,
+            bd=0,
+            activebackground="#475569",
+            activeforeground="white"
+        ).pack()
     
     def show_help(self):
         """Show help window"""
         help_window = tk.Toplevel(self.root)
         help_window.title("BlinkOS Help")
-        help_window.geometry("500x600")
+        help_window.geometry("550x650")
+        help_window.configure(bg="#f0f4f8")
+        
+        header_frame = tk.Frame(help_window, bg="#10b981", height=80)
+        header_frame.pack(fill=tk.X)
+        header_frame.pack_propagate(False)
         
         tk.Label(
-            help_window,
+            header_frame,
             text="How to Use BlinkOS",
-            font=("Arial", 18, "bold")
-        ).pack(pady=15)
+            font=("Helvetica", 22, "bold"),
+            fg="white",
+            bg="#10b981"
+        ).pack(pady=20)
         
         text = scrolledtext.ScrolledText(
             help_window,
-            width=60,
+            width=65,
             height=28,
-            font=("Arial", 10),
-            bg="#ecf0f1"
+            font=("Helvetica", 11),
+            bg="#ffffff",
+            fg="#1e293b",
+            relief=tk.FLAT,
+            borderwidth=0,
+            padx=15,
+            pady=15
         )
-        text.pack(padx=15, pady=10, fill=tk.BOTH, expand=True)
+        text.pack(padx=20, pady=20, fill=tk.BOTH, expand=True)
         
         help_text = """
 GETTING STARTED:
@@ -561,16 +708,16 @@ BEST PRACTICES:
 ===============
 
 Eye Tracking:
-  ✓ Sit ~50cm from camera
-  ✓ Good front lighting (no backlighting)
-  ✓ Keep head movements smooth
-  ✓ Blink deliberately for clicks
+  - Sit ~50cm from camera
+  - Good front lighting (no backlighting)
+  - Keep head movements smooth
+  - Blink deliberately for clicks
 
 Voice Control:
-  ✓ Speak clearly and at normal volume
-  ✓ Wait for recognition before next command
-  ✓ Use exact command phrases
-  ✓ Say "type" to enter dictation mode
+  - Speak clearly and at normal volume
+  - Wait for recognition before next command
+  - Use exact command phrases
+  - Say "type" to enter dictation mode
 
 DEMO SCENARIOS:
 ===============
@@ -618,37 +765,57 @@ For more help, see README.md
         text.insert("1.0", help_text)
         text.config(state=tk.DISABLED)
         
+        button_frame = tk.Frame(help_window, bg="#f0f4f8")
+        button_frame.pack(pady=15)
+        
         tk.Button(
-            help_window,
+            button_frame,
             text="Close",
             command=help_window.destroy,
-            width=15,
+            width=18,
             height=2,
-            bg="#3498db",
+            bg="#10b981",
             fg="white",
-            font=("Arial", 10, "bold")
-        ).pack(pady=15)
+            font=("Helvetica", 11, "bold"),
+            cursor="hand2",
+            relief=tk.FLAT,
+            bd=0,
+            activebackground="#059669",
+            activeforeground="white"
+        ).pack()
     
     def show_demo_scenarios(self):
         """Show demo scenarios"""
         demo_window = tk.Toplevel(self.root)
         demo_window.title("Demo Scenarios")
-        demo_window.geometry("550x600")
+        demo_window.geometry("600x650")
+        demo_window.configure(bg="#f0f4f8")
+        
+        header_frame = tk.Frame(demo_window, bg="#f59e0b", height=80)
+        header_frame.pack(fill=tk.X)
+        header_frame.pack_propagate(False)
         
         tk.Label(
-            demo_window,
-            text="Hackathon Demo Scenarios",
-            font=("Arial", 18, "bold")
-        ).pack(pady=15)
+            header_frame,
+            text="Demo Scenarios",
+            font=("Helvetica", 22, "bold"),
+            fg="white",
+            bg="#f59e0b"
+        ).pack(pady=20)
         
         text = scrolledtext.ScrolledText(
             demo_window,
-            width=65,
+            width=68,
             height=28,
-            font=("Arial", 10),
-            bg="#ecf0f1"
+            font=("Helvetica", 11),
+            bg="#ffffff",
+            fg="#1e293b",
+            relief=tk.FLAT,
+            borderwidth=0,
+            padx=15,
+            pady=15
         )
-        text.pack(padx=15, pady=10, fill=tk.BOTH, expand=True)
+        text.pack(padx=20, pady=20, fill=tk.BOTH, expand=True)
         
         demo_text = """
 DEMO SCENARIO 1: Web Research (2 min)
@@ -729,114 +896,130 @@ Steps:
 Impact: Shows real-world usage!
 
 
-PRESENTATION TIPS:
-==================
-
-✓ Start with problem statement (accessibility)
-✓ Show live demo (2-3 scenarios)
-✓ Have backup video ready
-✓ Explain technology briefly
-✓ Emphasize impact on users
-✓ Practice transitions between scenarios
-✓ Time yourself (< 5 minutes total)
 """
         
         text.insert("1.0", demo_text)
         text.config(state=tk.DISABLED)
         
+        button_frame = tk.Frame(demo_window, bg="#f0f4f8")
+        button_frame.pack(pady=15)
+        
         tk.Button(
-            demo_window,
+            button_frame,
             text="Close",
             command=demo_window.destroy,
-            width=15,
+            width=18,
             height=2,
-            bg="#9b59b6",
+            bg="#f59e0b",
             fg="white",
-            font=("Arial", 10, "bold")
-        ).pack(pady=15)
+            font=("Helvetica", 11, "bold"),
+            cursor="hand2",
+            relief=tk.FLAT,
+            bd=0,
+            activebackground="#d97706",
+            activeforeground="white"
+        ).pack()
     
     def show_settings(self):
         """Show settings window with adjustable parameters"""
         settings_window = tk.Toplevel(self.root)
-        settings_window.title("⚙️ BlinkOS Settings")
-        settings_window.geometry("600x700")
+        settings_window.title("Settings")
+        settings_window.geometry("650x750")
+        settings_window.configure(bg="#f0f4f8")
         
         # Load settings
         from modules.settings import Settings
         settings = Settings()
         
-        tk.Label(
-            settings_window,
-            text="⚙️ BlinkOS Settings",
-            font=("Arial", 18, "bold")
-        ).pack(pady=15)
+        header_frame = tk.Frame(settings_window, bg="#6366f1", height=80)
+        header_frame.pack(fill=tk.X)
+        header_frame.pack_propagate(False)
         
-        # Create notebook (tabs)
-        notebook = ttk.Notebook(settings_window)
-        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        tk.Label(
+            header_frame,
+            text="Settings",
+            font=("Helvetica", 22, "bold"),
+            fg="white",
+            bg="#6366f1"
+        ).pack(pady=20)
+        
+        # Create notebook (tabs) with modern styling
+        style = ttk.Style()
+        style.theme_use('default')
+        style.configure('Custom.TNotebook', background='#f0f4f8', borderwidth=0)
+        style.configure('Custom.TNotebook.Tab', padding=[20, 10], font=('Helvetica', 11, 'bold'))
+        
+        notebook = ttk.Notebook(settings_window, style='Custom.TNotebook')
+        notebook.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
         
         # === TAB 1: EYE TRACKING ===
-        eye_tab = tk.Frame(notebook, bg="#ecf0f1")
-        notebook.add(eye_tab, text="👁️ Eye Tracking")
+        eye_tab = tk.Frame(notebook, bg="#ffffff")
+        notebook.add(eye_tab, text="Eye Tracking")
         
-        tk.Label(eye_tab, text="Eye Tracking Settings", font=("Arial", 14, "bold"),
-                bg="#ecf0f1").pack(pady=10)
+        tk.Label(eye_tab, text="Eye Tracking Settings", font=("Helvetica", 16, "bold"),
+                bg="#ffffff", fg="#1e293b").pack(pady=15)
         
         # Smoothing slider
-        smooth_frame = tk.Frame(eye_tab, bg="#ecf0f1")
-        smooth_frame.pack(fill=tk.X, padx=20, pady=10)
+        smooth_frame = tk.Frame(eye_tab, bg="#ffffff")
+        smooth_frame.pack(fill=tk.X, padx=25, pady=12)
         
-        tk.Label(smooth_frame, text="Cursor Smoothing:", font=("Arial", 11),
-                bg="#ecf0f1").pack(anchor=tk.W)
-        tk.Label(smooth_frame, text="(Higher = smoother but slower)", font=("Arial", 9),
-                fg="#7f8c8d", bg="#ecf0f1").pack(anchor=tk.W)
+        tk.Label(smooth_frame, text="Cursor Smoothing:", font=("Helvetica", 12, "bold"),
+                bg="#ffffff", fg="#1e293b").pack(anchor=tk.W)
+        tk.Label(smooth_frame, text="(Higher = smoother but slower)", font=("Helvetica", 10),
+                fg="#64748b", bg="#ffffff").pack(anchor=tk.W, pady=(0, 5))
         
         smooth_var = tk.IntVar(value=settings.get('eye_tracking', 'smooth_buffer_size'))
         smooth_slider = tk.Scale(smooth_frame, from_=10, to=50, orient=tk.HORIZONTAL,
-                                variable=smooth_var, length=400, bg="#ecf0f1")
-        smooth_slider.pack(fill=tk.X, pady=5)
-        tk.Label(smooth_frame, textvariable=smooth_var, font=("Arial", 10, "bold"),
-                bg="#ecf0f1").pack()
+                                variable=smooth_var, length=450, bg="#ffffff",
+                                highlightthickness=0, troughcolor="#e2e8f0",
+                                activebackground="#3b82f6")
+        smooth_slider.pack(fill=tk.X, pady=8)
+        tk.Label(smooth_frame, textvariable=smooth_var, font=("Helvetica", 11, "bold"),
+                bg="#ffffff", fg="#3b82f6").pack()
         
         # Update rate slider
-        rate_frame = tk.Frame(eye_tab, bg="#ecf0f1")
-        rate_frame.pack(fill=tk.X, padx=20, pady=10)
+        rate_frame = tk.Frame(eye_tab, bg="#ffffff")
+        rate_frame.pack(fill=tk.X, padx=25, pady=12)
         
-        tk.Label(rate_frame, text="Cursor Update Rate:", font=("Arial", 11),
-                bg="#ecf0f1").pack(anchor=tk.W)
-        tk.Label(rate_frame, text="(Higher = slower updates, more stable)", font=("Arial", 9),
-                fg="#7f8c8d", bg="#ecf0f1").pack(anchor=tk.W)
+        tk.Label(rate_frame, text="Cursor Update Rate:", font=("Helvetica", 12, "bold"),
+                bg="#ffffff", fg="#1e293b").pack(anchor=tk.W)
+        tk.Label(rate_frame, text="(Higher = slower updates, more stable)", font=("Helvetica", 10),
+                fg="#64748b", bg="#ffffff").pack(anchor=tk.W, pady=(0, 5))
         
         rate_var = tk.IntVar(value=settings.get('eye_tracking', 'update_rate'))
         rate_slider = tk.Scale(rate_frame, from_=1, to=5, orient=tk.HORIZONTAL,
-                            variable=rate_var, length=400, bg="#ecf0f1")
-        rate_slider.pack(fill=tk.X, pady=5)
-        tk.Label(rate_frame, textvariable=rate_var, font=("Arial", 10, "bold"),
-                bg="#ecf0f1").pack()
+                            variable=rate_var, length=450, bg="#ffffff",
+                            highlightthickness=0, troughcolor="#e2e8f0",
+                            activebackground="#3b82f6")
+        rate_slider.pack(fill=tk.X, pady=8)
+        tk.Label(rate_frame, textvariable=rate_var, font=("Helvetica", 11, "bold"),
+                bg="#ffffff", fg="#3b82f6").pack()
         
         # Click cooldown slider
-        cooldown_frame = tk.Frame(eye_tab, bg="#ecf0f1")
-        cooldown_frame.pack(fill=tk.X, padx=20, pady=10)
+        cooldown_frame = tk.Frame(eye_tab, bg="#ffffff")
+        cooldown_frame.pack(fill=tk.X, padx=25, pady=12)
         
-        tk.Label(cooldown_frame, text="Click Cooldown (seconds):", font=("Arial", 11),
-                bg="#ecf0f1").pack(anchor=tk.W)
-        tk.Label(cooldown_frame, text="(Time between clicks)", font=("Arial", 9),
-                fg="#7f8c8d", bg="#ecf0f1").pack(anchor=tk.W)
+        tk.Label(cooldown_frame, text="Click Cooldown (seconds):", font=("Helvetica", 12, "bold"),
+                bg="#ffffff", fg="#1e293b").pack(anchor=tk.W)
+        tk.Label(cooldown_frame, text="(Time between clicks)", font=("Helvetica", 10),
+                fg="#64748b", bg="#ffffff").pack(anchor=tk.W, pady=(0, 5))
         
         cooldown_var = tk.DoubleVar(value=settings.get('eye_tracking', 'click_cooldown'))
         cooldown_slider = tk.Scale(cooldown_frame, from_=0.5, to=2.0, resolution=0.1,
                                 orient=tk.HORIZONTAL, variable=cooldown_var,
-                                length=400, bg="#ecf0f1")
-        cooldown_slider.pack(fill=tk.X, pady=5)
-        tk.Label(cooldown_frame, textvariable=cooldown_var, font=("Arial", 10, "bold"),
-                bg="#ecf0f1").pack()
+                                length=450, bg="#ffffff",
+                                highlightthickness=0, troughcolor="#e2e8f0",
+                                activebackground="#3b82f6")
+        cooldown_slider.pack(fill=tk.X, pady=8)
+        tk.Label(cooldown_frame, textvariable=cooldown_var, font=("Helvetica", 11, "bold"),
+                bg="#ffffff", fg="#3b82f6").pack()
         
         # === TAB 2: CALIBRATION ===
-        calib_tab = tk.Frame(notebook, bg="#ecf0f1")
-        notebook.add(calib_tab, text="🎯 Calibration")
+        calib_tab = tk.Frame(notebook, bg="#ffffff")
+        notebook.add(calib_tab, text="Calibration")
         
-        tk.Label(calib_tab, text="Calibration Settings", font=("Arial", 14, "bold"),
-                bg="#ecf0f1").pack(pady=10)
+        tk.Label(calib_tab, text="Calibration Settings", font=("Helvetica", 16, "bold"),
+                bg="#ffffff", fg="#1e293b").pack(pady=15)
         
         # Range expansion slider
         range_frame = tk.Frame(calib_tab, bg="#ecf0f1")
@@ -890,34 +1073,37 @@ PRESENTATION TIPS:
                 bg="#ecf0f1").pack()
         
         # === TAB 3: SYSTEM ===
-        system_tab = tk.Frame(notebook, bg="#ecf0f1")
+        system_tab = tk.Frame(notebook, bg="#ffffff")
         notebook.add(system_tab, text="⚙️ System")
         
-        tk.Label(system_tab, text="System Settings", font=("Arial", 14, "bold"),
-                bg="#ecf0f1").pack(pady=10)
+        tk.Label(system_tab, text="System Settings", font=("Helvetica", 16, "bold"),
+                bg="#ffffff", fg="#1e293b").pack(pady=15)
         
         # Checkboxes
-        checks_frame = tk.Frame(system_tab, bg="#ecf0f1")
-        checks_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
+        checks_frame = tk.Frame(system_tab, bg="#ffffff")
+        checks_frame.pack(fill=tk.BOTH, expand=True, padx=25, pady=15)
         
         auto_eye_var = tk.BooleanVar(value=settings.get('system', 'auto_start_eye_tracking'))
         tk.Checkbutton(checks_frame, text="Auto-start eye tracking on launch",
-                    variable=auto_eye_var, font=("Arial", 11),
-                    bg="#ecf0f1").pack(anchor=tk.W, pady=5)
+                    variable=auto_eye_var, font=("Helvetica", 12),
+                    bg="#ffffff", fg="#1e293b", selectcolor="#ffffff",
+                    activebackground="#ffffff").pack(anchor=tk.W, pady=8)
         
         auto_voice_var = tk.BooleanVar(value=settings.get('system', 'auto_start_voice_control'))
         tk.Checkbutton(checks_frame, text="Auto-start voice control on launch",
-                    variable=auto_voice_var, font=("Arial", 11),
-                    bg="#ecf0f1").pack(anchor=tk.W, pady=5)
+                    variable=auto_voice_var, font=("Helvetica", 12),
+                    bg="#ffffff", fg="#1e293b", selectcolor="#ffffff",
+                    activebackground="#ffffff").pack(anchor=tk.W, pady=8)
         
         auto_calib_var = tk.BooleanVar(value=settings.get('system', 'load_calibration_on_start'))
         tk.Checkbutton(checks_frame, text="Load calibration on start",
-                    variable=auto_calib_var, font=("Arial", 11),
-                    bg="#ecf0f1").pack(anchor=tk.W, pady=5)
+                    variable=auto_calib_var, font=("Helvetica", 12),
+                    bg="#ffffff", fg="#1e293b", selectcolor="#ffffff",
+                    activebackground="#ffffff").pack(anchor=tk.W, pady=8)
         
         # === BUTTONS ===
-        button_frame = tk.Frame(settings_window)
-        button_frame.pack(fill=tk.X, padx=20, pady=15)
+        button_frame = tk.Frame(settings_window, bg="#f0f4f8")
+        button_frame.pack(fill=tk.X, padx=20, pady=20)
         
         # Define nested functions for button commands
         def save_and_close():
@@ -949,16 +1135,22 @@ PRESENTATION TIPS:
                 settings_window.destroy()
         
         tk.Button(button_frame, text="Save & Close", command=save_and_close,
-                 width=15, height=2, bg="#27ae60", fg="white",
-                 font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
+                 width=16, height=2, bg="#10b981", fg="white",
+                 font=("Helvetica", 11, "bold"), cursor="hand2",
+                 relief=tk.FLAT, bd=0, activebackground="#059669",
+                 activeforeground="white").pack(side=tk.LEFT, padx=5)
         
         tk.Button(button_frame, text="Reset to Defaults", command=reset_defaults,
-                 width=15, height=2, bg="#e67e22", fg="white",
-                 font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
+                 width=16, height=2, bg="#f59e0b", fg="white",
+                 font=("Helvetica", 11, "bold"), cursor="hand2",
+                 relief=tk.FLAT, bd=0, activebackground="#d97706",
+                 activeforeground="white").pack(side=tk.LEFT, padx=5)
         
         tk.Button(button_frame, text="Cancel", command=settings_window.destroy,
-                 width=15, height=2, bg="#95a5a6", fg="white",
-                 font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
+                 width=16, height=2, bg="#64748b", fg="white",
+                 font=("Helvetica", 11, "bold"), cursor="hand2",
+                 relief=tk.FLAT, bd=0, activebackground="#475569",
+                 activeforeground="white").pack(side=tk.LEFT, padx=5)
     
     def on_closing(self):
         """Handle window close"""

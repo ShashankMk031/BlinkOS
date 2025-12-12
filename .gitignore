@@ -1,4 +1,3 @@
-cat > .gitignore << 'EOF'
 # Python
 __pycache__/
 *.py[cod]
@@ -7,32 +6,63 @@ __pycache__/
 .Python
 venv/
 env/
+ENV/
 *.egg-info/
+dist/
+build/
+*.egg
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+.DS_Store
 
 # Data files
 data/calibration.pkl
 data/settings.json
 *.log
+logs/*.log
 
 # MacOS
 .DS_Store
+.AppleDouble
+.LSOverride
 
 # Environment
 .env
-EOF  
+.env.local
 
-.python-version 
-
-DEMO.md 
-PLAN.md 
-REQUIREMENTS.md 
-TODO.md 
+# Documentation (private planning docs)
+.python-version
+DEMO.md
+PLAN.md
+REQUIREMENTS.md
+TODO.md
 ARCHITECTURE.md
-PRD.md 
-CHANGELOG.md 
+PRD.md
+CHANGELOG.md
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/

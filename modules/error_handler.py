@@ -27,7 +27,7 @@ class ErrorHandler:
             context: Where the error occurred 
             fatal : If True , exit after handling 
         """
-        self.error_counnt +=1 
+        self.error_count +=1 
         self.last_error = error 
         
         error_msg = f"Error in {context}:{str(error)}" 
@@ -77,52 +77,101 @@ class ErrorHandler:
         returns: 
         tuple: (bool: has_permission, str:error_message)
         """ 
+        # region agent log
+        import json
+        import time
+        log_path = "/Users/shashankmk/Documents/Projects-Development/BlinkOS + SurveyAI/.cursor/debug.log"
+        def write_log(hypothesis_id, location, message, data):
+            payload = {
+                "sessionId": "debug-session",
+                "runId": "mic-permission-check",
+                "hypothesisId": hypothesis_id,
+                "location": location,
+                "message": message,
+                "data": data,
+                "timestamp": int(time.time() * 1000),
+            }
+            try:
+                with open(log_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(payload, ensure_ascii=True) + "\n")
+            except:
+                pass
+        # endregion
+        
         try: 
+            # region agent log
+            write_log("H1", "error_handler.py:81", "Starting microphone permission check", {})
+            # endregion
+            
             import speech_recognition as sr 
             recognizer = sr.Recognizer()
             
+            # region agent log
+            write_log("H2", "error_handler.py:85", "Creating Microphone object", {})
+            # endregion
+            
             with sr.Microphone() as source: 
+                # region agent log
+                write_log("H3", "error_handler.py:88", "Before adjust_for_ambient_noise", {})
+                # endregion
+                
                 recognizer.adjust_for_ambient_noise(source, duration=0.5) 
+                
+                # region agent log
+                write_log("H4", "error_handler.py:91", "After adjust_for_ambient_noise - success", {})
+                # endregion
                 
             return True, "Microphone access OK"
         
         except Exception as e: 
+            # region agent log
+            import traceback
+            write_log("H5", "error_handler.py:96", "Microphone check exception caught", {
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+                "error_repr": repr(e),
+                "traceback": traceback.format_exc()[:500],
+            })
+            # endregion
+            
             erroe_msg = str(e) 
             
-            if "list index out of range" in erroe_msg or "No Default Input Device" in erroe_msg:
+            # Check for dependency issues first
+            if "distutils" in erroe_msg or "ModuleNotFoundError" in str(type(e).__name__):
+                return False, f"Missing dependency: {erroe_msg}. Try: pip install setuptools"
+            elif "list index out of range" in erroe_msg or "No Default Input Device" in erroe_msg:
                 return False, "No microphone detected. Check microphone connection."
             else: 
                 return False, f"Microphone access denied. Check permission in  System Preferences > Security & Privacy > Microphone"
     
-    def check_dependencies(self): 
-        """ 
-        Check if lall required dependencirs are installed 
-        
-        returns: 
-        dict: {package_name:bool:is_installed}
-        tuple: (bool: all_ok, list: missing_packages)
-        """ 
-        required = { 
-            'cv2':'opencv-python', 
-            'mediapipe':'mediapipe', 
-            'speech_recognition':'SpeechRecognition',
-            'pyautogui':'pyautogui',
-            'pysttsx3':'pyttsx3',
-            'numpy':'numpy'
+    def check_dependencies(self):
+        """Check required dependencies"""
+        required = {
+            'cv2': 'opencv-python',
+            'mediapipe': 'mediapipe',
+            'pyautogui': 'pyautogui',
+            'speech_recognition': 'SpeechRecognition',
+            'numpy': 'numpy'
         }
         
-        missing = [] 
+        missing = []
         
-        for module,package in required.items(): 
-            try: 
-                __import__(module) 
+        for module, package in required.items():
+            try:
+                __import__(module)
             except ImportError:
-                missing.append(package) 
+                missing.append(package)
+        
+        # Check pyttsx3 separately (optional)
+        try:
+            __import__('pyttsx3')
+        except ImportError:
+            print("  Note: pyttsx3 not found (optional - only needed for TTS)")
         
         if missing:
-            return False, missing 
+            return False, missing
         
-        return True, [] 
+        return True, []
     
     def get_system_info(self):
         """ 
@@ -134,7 +183,8 @@ class ErrorHandler:
             'platform':platform.system(), 
             'platform_version':platform.version(),
             'architecture':platform.machine(),
-            'python_version':sys.version}
+            'python_version':sys.version,
+            }
         
         return info 
     
@@ -161,12 +211,15 @@ class ErrorHandler:
         print("  python3 main.py")
         print("="*60 + "\n")
         
-    def check_all_permissions(self): 
+    def check_all_permissions(self, require_microphone=True): 
         """ 
         Check all required permissions 
         
+        args:
+            require_microphone: If False, microphone check is optional (for eye tracker)
+        
         returns: 
-            bool: True if all permission OK 
+            bool: True if all required permissions OK 
         """ 
         
         all_ok = True 
@@ -180,14 +233,20 @@ class ErrorHandler:
             self.show_permission_instructions('camera') 
             all_ok = False 
         
-        # Check microphone 
+        # Check microphone (optional for eye tracker)
         mic_ok, mic_msg = self.check_microphone_permission() 
         if mic_ok: 
             print("Microphone permission: OK") 
         else: 
-            print(f"Microphone permission: FAILED - {mic_msg}")
-            self.show_permission_instructions('microphone') 
-            all_ok = False 
+            if require_microphone:
+                print(f"Microphone permission: FAILED - {mic_msg}")
+                # Only show permission instructions if it's actually a permission issue
+                if "permission" in mic_msg.lower() or "Security & Privacy" in mic_msg:
+                    self.show_permission_instructions('microphone')
+                all_ok = False
+            else:
+                # Microphone is optional, just warn
+                print(f"Microphone permission: WARNING - {mic_msg} (optional for eye tracking)") 
         
         #Check dependencies 
         deps_ok, missing = self.check_dependencies() 
@@ -212,7 +271,7 @@ class ErrorHandler:
         """
         try: 
             import cv2 
-            cam = cv2.VIdeoCapture(camera_id) 
+            cam = cv2.VideoCapture(camera_id) 
             
             if not cam.isOpened(): 
                 raise Exception("Camera failed to open.") 
@@ -227,7 +286,7 @@ class ErrorHandler:
             
             return cam 
         except Exception as e:
-            self.handle_erros(e,"Camera Initialization") 
+            self.handle_error(e,"Camera Initialization") 
             return None 
     
     def safe_microphone_init(self):

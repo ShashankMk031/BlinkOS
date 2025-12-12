@@ -13,6 +13,8 @@ import threading
 import re
 import urllib.parse
 
+from modules.error_handler import ErrorHandler
+from modules.logger import Logger
 
 class VoiceController:
     """
@@ -29,6 +31,15 @@ class VoiceController:
         
         # Select microphone (with auto-detection)
         self.select_microphone()
+        
+        # Initialize error handling 
+        self.error_handler = ErrorHandler() 
+        self.logger = Logger() 
+        
+        # Check microphone permission 
+        recognizer, microphone = self.error_handler.safe_microphone_init() 
+        if recognizer is None: 
+            raise Exception ("Failed to initalize microphone") 
         
         # Adjust for ambient noise
         print("Calibrating microphone for ambient noise...")
@@ -831,7 +842,7 @@ EXAMPLES:
     def run(self):
         """Main voice control loop"""
         print("\n" + "="*60)
-        print("🎤 VOICE CONTROL ACTIVE")
+        print("VOICE CONTROL ACTIVE")
         print("="*60)
         print("\nSay 'help' for command list")
         print("Say 'exit' to quit")

@@ -174,14 +174,18 @@ class SessionLogger:
     
     def log_session_end(self):
         """Log session end with summary"""
-        summary = self.get_session_summary()
-        
-        self.logger.section("Session Summary")
-        self.logger.info(f"Duration: {summary['duration']}")
-        self.logger.info(f"Clicks: {summary['clicks']}")
-        self.logger.info(f"Voice Commands: {summary['voice_commands']}")
-        self.logger.info(f"Errors: {summary['errors']}")
-        self.logger.info(f"Calibrations: {summary['calibrations']}")
+        try:
+            summary = self.get_session_summary()
+            
+            if summary: 
+                self.logger.section("Session Summary")
+                self.logger.info(f"Duration: {summary['duration']}")
+                self.logger.info(f"Clicks: {summary['clicks']}")
+                self.logger.info(f"Voice Commands: {summary['voice_commands']}")
+                self.logger.info(f"Errors: {summary['errors']}")
+                self.logger.info(f"Calibrations: {summary['calibrations']}")
+        except Exception as e: 
+            self.logger.error(f"Error logging session end: {e}")   
     
 def cleanup_old_logs(log_dir = 'logs', max_age_days = 7): 
     """ 
