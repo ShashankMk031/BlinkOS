@@ -75,9 +75,9 @@ def test_microphone():
     print("="*50)
 
 if __name__ == "__main__":
-    print("🚀 Blink & Speak OS - Setup Verification\n")
+    print("BlinkOS - Setup Verification\n")
     test_imports()
     test_camera()
     test_microphone()
-    print("\n✅ Setup verification complete!")
-    print("\nIf everything shows ✓, you're ready to start coding!")
+    print("\nSetup verification complete!")
+    print("\nIf everything shows [OK], you're ready to start coding!")
